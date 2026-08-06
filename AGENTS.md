@@ -35,7 +35,8 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - Auto-categorization engine with built-in rules + user learning rules (`src/lib/categorization.ts`)
 - DB schema is at version 4 (v3 added `settings` table; v4 added `isRecurring` index on expenses)
 - Bank: Davibank/Davivienda savings account, Colombian format (period thousands, comma decimals)
-- Recurring expenses logic in `src/lib/recurring.ts` (copyExpensesFromPreviousMonth, autoPopulateRecurring)
+- Recurring expenses use **upfront creation**: when an expense is marked recurring, `createRecurringCopies()` in `src/lib/recurring.ts` immediately creates copies in every month from source+1 to current calendar month. No navigation hooks or triggers involved.
+- `copyExpensesFromPreviousMonth` (manual "Copiar mes anterior" button) is a separate feature that copies ALL expenses
 - E2E tests in `tests/e2e/` with fixtures in `tests/fixtures/`; config at `playwright.config.ts`
 - E2E tests clear IndexedDB per-test for isolation; nav helper targets desktop sidebar (`nav.hidden.md:block`)
 

@@ -1,9 +1,7 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
-import { useState, useCallback } from 'react';
 import { MonthSelector } from '@/components/month-selector';
 import { TourOverlay } from '@/components/tour-overlay';
 import { TourAutoStart } from '@/components/tour-auto-start';
-import { useAutoRecurring } from '@/hooks/useAutoRecurring';
 import {
   LayoutDashboard,
   List,
@@ -17,25 +15,8 @@ export const Route = createRootRoute({
 });
 
 function RootLayout() {
-  const [globalToast, setGlobalToast] = useState<string | null>(null);
-
-  const handleToast = useCallback((msg: string) => {
-    setGlobalToast(msg);
-    setTimeout(() => setGlobalToast(null), 4000);
-  }, []);
-
-  // Global auto-populate recurring expenses on month change
-  useAutoRecurring(handleToast);
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Global toast for recurring expenses */}
-      {globalToast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-card border border-border rounded-lg shadow-lg px-4 py-3 text-sm font-medium animate-in fade-in slide-in-from-top-2">
-          {globalToast}
-        </div>
-      )}
-
       {/* Tour */}
       <TourOverlay />
       <TourAutoStart />

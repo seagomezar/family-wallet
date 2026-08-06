@@ -1,10 +1,53 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import "fake-indexeddb/auto";
-import { db } from "@/db/schema";
+import { db, type Expense } from "@/db/schema";
 import {
   copyExpensesFromPreviousMonth,
-  autoPopulateRecurring,
+  createRecurringCopies,
 } from "@/lib/recurring";
+import * as currency from "@/lib/currency";
+
+// Helper to create a budget
+async function createBudget(month: string, income = 18500000) {
+  await db.budgets.add({
+    id: `budget-${month}`,
+    month,
+    totalIncome: income,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+}
+
+// Helper to create an expense and return it
+async function createExpense(
+  overrides: Partial<Expense> & { budgetId: string; description: string },
+): Promise<Expense> {
+  const id =
+    overrides.id ??
+    `exp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const expense: Expense = {
+    id,
+    budgetId: overrides.budgetId,
+    categoryId: overrides.categoryId ?? "cat-1",
+    description: overrides.description,
+    amount: overrides.amount ?? 100000,
+    previousAmount: overrides.previousAmount ?? 0,
+    paymentSource: overrides.paymentSource ?? "bancolombia",
+    status: overrides.status ?? "paid",
+    isRecurring: overrides.isRecurring ?? false,
+    createdAt: overrides.createdAt ?? new Date(),
+    updatedAt: overrides.updatedAt ?? new Date(),
+  };
+  await db.expenses.add(expense);
+  return expense;
+}
+
+// Helper to get expenses for a month
+async function getMonthExpenses(month: string): Promise<Expense[]> {
+  const budget = await db.budgets.where("month").equals(month).first();
+  if (!budget) return [];
+  return db.expenses.where("budgetId").equals(budget.id).toArray();
+}
 
 describe("Recurring Expenses", () => {
   beforeEach(async () => {
@@ -14,49 +57,33 @@ describe("Recurring Expenses", () => {
 
   describe("copyExpensesFromPreviousMonth", () => {
     it("copies all expenses from previous month to current month", async () => {
-      // Setup: previous month has expenses
-      await db.budgets.add({
-        id: "budget-2026-05",
-        month: "2026-05",
-        totalIncome: 18500000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+      await createBudget("2026-05");
+      await createExpense({
+        budgetId: "budget-2026-05",
+        categoryId: "cat-1",
+        description: "Administración",
+        amount: 500000,
+        previousAmount: 480000,
+        paymentSource: "bancolombia",
+        status: "paid",
+        isRecurring: true,
       });
-      await db.expenses.bulkAdd([
-        {
-          id: "exp-1",
-          budgetId: "budget-2026-05",
-          categoryId: "cat-1",
-          description: "Administración",
-          amount: 500000,
-          previousAmount: 480000,
-          paymentSource: "bancolombia",
-          status: "paid",
-          isRecurring: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "exp-2",
-          budgetId: "budget-2026-05",
-          categoryId: "cat-2",
-          description: "Netflix",
-          amount: 45000,
-          previousAmount: 40000,
-          paymentSource: "tc-sebas",
-          status: "paid",
-          isRecurring: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
+      await createExpense({
+        budgetId: "budget-2026-05",
+        categoryId: "cat-2",
+        description: "Netflix",
+        amount: 45000,
+        previousAmount: 40000,
+        paymentSource: "tc-sebas",
+        status: "paid",
+        isRecurring: false,
+      });
 
       const result = await copyExpensesFromPreviousMonth("2026-06");
 
       expect(result.copied).toBe(2);
       expect(result.alreadyHasExpenses).toBe(false);
 
-      // Verify the copied expenses
       const newBudget = await db.budgets.where("month").equals("2026-06").first();
       expect(newBudget).toBeDefined();
       expect(newBudget!.totalIncome).toBe(18500000);
@@ -66,11 +93,8 @@ describe("Recurring Expenses", () => {
         .equals(newBudget!.id)
         .toArray();
       expect(newExpenses).toHaveLength(2);
-
-      // All should be pending
       expect(newExpenses.every((e) => e.status === "pending")).toBe(true);
 
-      // previousAmount should be set from the source amount
       const admin = newExpenses.find((e) => e.description === "Administración");
       expect(admin).toBeDefined();
       expect(admin!.previousAmount).toBe(500000);
@@ -79,58 +103,27 @@ describe("Recurring Expenses", () => {
     });
 
     it("prevents duplicates when current month already has expenses", async () => {
-      // Setup: both months have data
-      await db.budgets.bulkAdd([
-        {
-          id: "budget-2026-05",
-          month: "2026-05",
-          totalIncome: 18500000,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "budget-2026-06",
-          month: "2026-06",
-          totalIncome: 18500000,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
-      await db.expenses.bulkAdd([
-        {
-          id: "exp-prev",
-          budgetId: "budget-2026-05",
-          categoryId: "cat-1",
-          description: "Admin",
-          amount: 500000,
-          previousAmount: 0,
-          paymentSource: "bancolombia",
-          status: "paid",
-          isRecurring: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "exp-current",
-          budgetId: "budget-2026-06",
-          categoryId: "cat-1",
-          description: "Already here",
-          amount: 100000,
-          previousAmount: 0,
-          paymentSource: "bancolombia",
-          status: "pending",
-          isRecurring: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
+      await createBudget("2026-05");
+      await createBudget("2026-06");
+      await createExpense({
+        budgetId: "budget-2026-05",
+        categoryId: "cat-1",
+        description: "Admin",
+        amount: 500000,
+        isRecurring: true,
+      });
+      await createExpense({
+        budgetId: "budget-2026-06",
+        categoryId: "cat-1",
+        description: "Already here",
+        amount: 100000,
+        isRecurring: false,
+      });
 
       const result = await copyExpensesFromPreviousMonth("2026-06");
-
       expect(result.copied).toBe(0);
       expect(result.alreadyHasExpenses).toBe(true);
 
-      // Verify no new expenses were added
       const expenses = await db.expenses
         .where("budgetId")
         .equals("budget-2026-06")
@@ -145,238 +138,262 @@ describe("Recurring Expenses", () => {
     });
   });
 
-  describe("autoPopulateRecurring", () => {
-    it("auto-populates only recurring expenses from the previous month", async () => {
-      await db.budgets.add({
-        id: "budget-2026-05",
-        month: "2026-05",
-        totalIncome: 18500000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      await db.expenses.bulkAdd([
-        {
-          id: "exp-1",
-          budgetId: "budget-2026-05",
-          categoryId: "cat-1",
-          description: "Administración",
-          amount: 500000,
-          previousAmount: 0,
-          paymentSource: "bancolombia",
-          status: "paid",
-          isRecurring: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "exp-2",
-          budgetId: "budget-2026-05",
-          categoryId: "cat-2",
-          description: "Compras varias",
-          amount: 200000,
-          previousAmount: 0,
-          paymentSource: "efectivo",
-          status: "paid",
-          isRecurring: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "exp-3",
-          budgetId: "budget-2026-05",
-          categoryId: "cat-3",
-          description: "Crédito carro",
-          amount: 2000000,
-          previousAmount: 0,
-          paymentSource: "bancolombia",
-          status: "paid",
-          isRecurring: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
-
-      const result = await autoPopulateRecurring("2026-06");
-
-      expect(result.populated).toBe(2); // Only the 2 recurring ones
-      expect(result.reason).toBe("populated");
-
-      const newBudget = await db.budgets.where("month").equals("2026-06").first();
-      expect(newBudget).toBeDefined();
-
-      const newExpenses = await db.expenses
-        .where("budgetId")
-        .equals(newBudget!.id)
-        .toArray();
-      expect(newExpenses).toHaveLength(2);
-      expect(newExpenses.every((e) => e.isRecurring)).toBe(true);
-      expect(newExpenses.every((e) => e.status === "pending")).toBe(true);
-
-      const descriptions = newExpenses.map((e) => e.description).sort();
-      expect(descriptions).toEqual(["Administración", "Crédito carro"]);
+  describe("createRecurringCopies", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
     });
 
-    it("does not populate if current month already has expenses", async () => {
-      await db.budgets.bulkAdd([
-        {
-          id: "budget-2026-05",
-          month: "2026-05",
-          totalIncome: 18500000,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "budget-2026-06",
-          month: "2026-06",
-          totalIncome: 18500000,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
-      await db.expenses.bulkAdd([
-        {
-          id: "exp-prev",
-          budgetId: "budget-2026-05",
-          categoryId: "cat-1",
-          description: "Admin",
-          amount: 500000,
-          previousAmount: 0,
-          paymentSource: "bancolombia",
-          status: "paid",
-          isRecurring: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "exp-current",
-          budgetId: "budget-2026-06",
-          categoryId: "cat-1",
-          description: "Already here",
-          amount: 100000,
-          previousAmount: 0,
-          paymentSource: "bancolombia",
-          status: "pending",
-          isRecurring: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
+    it("creates copies from source month+1 to current month", async () => {
+      // Mock current month to 2026-08
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-08");
 
-      const result = await autoPopulateRecurring("2026-06");
-      expect(result.populated).toBe(0);
-      expect(result.reason).toBe("already_has_expenses");
-    });
-
-    it("searches up to 12 months back to find data and cascades forward", async () => {
-      // Data is 3 months back
-      await db.budgets.add({
-        id: "budget-2026-03",
-        month: "2026-03",
-        totalIncome: 18500000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      await db.expenses.add({
-        id: "exp-old",
-        budgetId: "budget-2026-03",
-        categoryId: "cat-1",
-        description: "Servicios",
-        amount: 300000,
-        previousAmount: 0,
-        paymentSource: "bancolombia",
-        status: "paid",
+      await createBudget("2026-05");
+      const expense = await createExpense({
+        budgetId: "budget-2026-05",
+        description: "Plan Claro",
+        amount: 90000,
         isRecurring: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       });
 
-      const result = await autoPopulateRecurring("2026-06");
-      // Cascades through Apr, May, Jun = 3 months × 1 expense
-      expect(result.populated).toBe(3);
-      expect(result.reason).toBe("populated");
+      const copies = await createRecurringCopies(expense, "2026-05");
 
-      // Verify target month (June)
-      const newBudget = await db.budgets.where("month").equals("2026-06").first();
-      const newExpenses = await db.expenses
-        .where("budgetId")
-        .equals(newBudget!.id)
-        .toArray();
-      expect(newExpenses[0]!.description).toBe("Servicios");
-      expect(newExpenses[0]!.previousAmount).toBe(300000);
+      // Jun, Jul, Aug = 3 months
+      expect(copies).toBe(3);
 
-      // Verify intermediate months were filled
-      const aprBudget = await db.budgets.where("month").equals("2026-04").first();
-      expect(aprBudget).toBeDefined();
-      const mayBudget = await db.budgets.where("month").equals("2026-05").first();
-      expect(mayBudget).toBeDefined();
+      for (const month of ["2026-06", "2026-07", "2026-08"]) {
+        const expenses = await getMonthExpenses(month);
+        expect(expenses).toHaveLength(1);
+        expect(expenses[0]!.description).toBe("Plan Claro");
+        expect(expenses[0]!.amount).toBe(90000);
+        expect(expenses[0]!.previousAmount).toBe(90000);
+        expect(expenses[0]!.isRecurring).toBe(true);
+        expect(expenses[0]!.status).toBe("pending");
+      }
     });
 
-    it("returns 0 when no recurring expenses exist", async () => {
-      await db.budgets.add({
-        id: "budget-2026-05",
-        month: "2026-05",
-        totalIncome: 18500000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+    it("returns 0 when source month is current month", async () => {
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-06");
+
+      await createBudget("2026-06");
+      const expense = await createExpense({
+        budgetId: "budget-2026-06",
+        description: "Netflix",
+        amount: 45000,
+        isRecurring: true,
       });
-      await db.expenses.add({
-        id: "exp-1",
+
+      const copies = await createRecurringCopies(expense, "2026-06");
+      expect(copies).toBe(0);
+    });
+
+    it("skips months that already have a duplicate (same description + categoryId)", async () => {
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-08");
+
+      await createBudget("2026-05");
+      const expense = await createExpense({
         budgetId: "budget-2026-05",
-        categoryId: "cat-1",
-        description: "One-time purchase",
-        amount: 50000,
-        previousAmount: 0,
-        paymentSource: "efectivo",
-        status: "paid",
-        isRecurring: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      const result = await autoPopulateRecurring("2026-06");
-      expect(result.populated).toBe(0);
-      expect(result.reason).toBe("no_recurring_in_source");
-    });
-
-    it("returns no_source_data when no previous month has data", async () => {
-      const result = await autoPopulateRecurring("2026-06");
-      expect(result.populated).toBe(0);
-      expect(result.reason).toBe("no_source_data");
-    });
-
-    it("sets previousAmount from source expense amount", async () => {
-      await db.budgets.add({
-        id: "budget-2026-05",
-        month: "2026-05",
-        totalIncome: 18500000,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-      await db.expenses.add({
-        id: "exp-1",
-        budgetId: "budget-2026-05",
-        categoryId: "cat-1",
         description: "Internet",
         amount: 120000,
-        previousAmount: 110000,
-        paymentSource: "bancolombia",
-        status: "paid",
+        categoryId: "cat-1",
         isRecurring: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
       });
 
-      await autoPopulateRecurring("2026-06");
+      // Pre-create a matching expense in July
+      await createBudget("2026-07");
+      await createExpense({
+        budgetId: "budget-2026-07",
+        description: "Internet",
+        amount: 130000, // different amount, but same desc+cat
+        categoryId: "cat-1",
+        isRecurring: true,
+      });
 
-      const newBudget = await db.budgets.where("month").equals("2026-06").first();
-      const newExpenses = await db.expenses
-        .where("budgetId")
-        .equals(newBudget!.id)
-        .toArray();
-      
-      // previousAmount should be the actual amount from last month, not the old previousAmount
-      expect(newExpenses[0]!.previousAmount).toBe(120000);
-      expect(newExpenses[0]!.amount).toBe(120000);
+      const copies = await createRecurringCopies(expense, "2026-05");
+
+      // Jun (created), Jul (skipped - duplicate), Aug (created) = 2
+      expect(copies).toBe(2);
+
+      // July still has original amount
+      const julExpenses = await getMonthExpenses("2026-07");
+      expect(julExpenses).toHaveLength(1);
+      expect(julExpenses[0]!.amount).toBe(130000);
+    });
+
+    it("does not skip if different categoryId even with same description", async () => {
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-07");
+
+      await createBudget("2026-05");
+      const expense = await createExpense({
+        budgetId: "budget-2026-05",
+        description: "Seguro",
+        amount: 180000,
+        categoryId: "cat-A",
+        isRecurring: true,
+      });
+
+      // Pre-create expense with same desc but DIFFERENT category in June
+      await createBudget("2026-06");
+      await createExpense({
+        budgetId: "budget-2026-06",
+        description: "Seguro",
+        amount: 180000,
+        categoryId: "cat-B",
+        isRecurring: true,
+      });
+
+      const copies = await createRecurringCopies(expense, "2026-05");
+
+      // Jun (cat-A doesn't match cat-B, so created) + Jul = 2
+      expect(copies).toBe(2);
+
+      // June now has both
+      const junExpenses = await getMonthExpenses("2026-06");
+      expect(junExpenses).toHaveLength(2);
+    });
+
+    it("auto-creates budgets for intermediate months with source income", async () => {
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-08");
+
+      await createBudget("2026-05", 20000000);
+      const expense = await createExpense({
+        budgetId: "budget-2026-05",
+        description: "Admin",
+        amount: 500000,
+        isRecurring: true,
+      });
+
+      await createRecurringCopies(expense, "2026-05");
+
+      // All created budgets should have source income
+      for (const month of ["2026-06", "2026-07", "2026-08"]) {
+        const budget = await db.budgets.where("month").equals(month).first();
+        expect(budget).toBeDefined();
+        expect(budget!.totalIncome).toBe(20000000);
+      }
+    });
+
+    it("calling twice does not duplicate (idempotent)", async () => {
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-08");
+
+      await createBudget("2026-06");
+      const expense = await createExpense({
+        budgetId: "budget-2026-06",
+        description: "Gas",
+        amount: 90000,
+        isRecurring: true,
+      });
+
+      const first = await createRecurringCopies(expense, "2026-06");
+      expect(first).toBe(2); // Jul + Aug
+
+      const second = await createRecurringCopies(expense, "2026-06");
+      expect(second).toBe(0); // all skipped
+
+      // Verify no duplicates
+      const julExpenses = await getMonthExpenses("2026-07");
+      expect(julExpenses).toHaveLength(1);
+      const augExpenses = await getMonthExpenses("2026-08");
+      expect(augExpenses).toHaveLength(1);
+    });
+
+    it("captain scenario: October 2025 recurring → copies to August 2026", async () => {
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-08");
+
+      await createBudget("2025-10");
+      const expense = await createExpense({
+        budgetId: "budget-2025-10",
+        description: "Admin Edificio",
+        amount: 500000,
+        isRecurring: true,
+      });
+
+      const copies = await createRecurringCopies(expense, "2025-10");
+
+      // Nov 2025 through Aug 2026 = 10 months
+      expect(copies).toBe(10);
+
+      // Verify a few specific months
+      for (const month of ["2025-11", "2025-12", "2026-01", "2026-05", "2026-08"]) {
+        const expenses = await getMonthExpenses(month);
+        expect(expenses).toHaveLength(1);
+        expect(expenses[0]!.description).toBe("Admin Edificio");
+        expect(expenses[0]!.amount).toBe(500000);
+        expect(expenses[0]!.status).toBe("pending");
+      }
+    });
+
+    it("previousAmount is set to the source expense's amount", async () => {
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-07");
+
+      await createBudget("2026-05");
+      const expense = await createExpense({
+        budgetId: "budget-2026-05",
+        description: "Crédito Carro",
+        amount: 2350000,
+        previousAmount: 2300000,
+        isRecurring: true,
+      });
+
+      await createRecurringCopies(expense, "2026-05");
+
+      const junExpenses = await getMonthExpenses("2026-06");
+      expect(junExpenses[0]!.previousAmount).toBe(2350000);
+      expect(junExpenses[0]!.amount).toBe(2350000);
+
+      const julExpenses = await getMonthExpenses("2026-07");
+      expect(julExpenses[0]!.previousAmount).toBe(2350000);
+    });
+
+    it("copies preserve paymentSource and categoryId from the source", async () => {
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-07");
+
+      await createBudget("2026-05");
+      const expense = await createExpense({
+        budgetId: "budget-2026-05",
+        description: "Netflix",
+        amount: 45000,
+        categoryId: "cat-entretenimiento",
+        paymentSource: "tc-sebas",
+        isRecurring: true,
+      });
+
+      await createRecurringCopies(expense, "2026-05");
+
+      const junExpenses = await getMonthExpenses("2026-06");
+      expect(junExpenses[0]!.categoryId).toBe("cat-entretenimiento");
+      expect(junExpenses[0]!.paymentSource).toBe("tc-sebas");
+    });
+
+    it("works with existing budgets that have other expenses", async () => {
+      vi.spyOn(currency, "currentMonthKey").mockReturnValue("2026-07");
+
+      await createBudget("2026-05");
+      const expense = await createExpense({
+        budgetId: "budget-2026-05",
+        description: "Admin",
+        amount: 500000,
+        categoryId: "cat-vivienda",
+        isRecurring: true,
+      });
+
+      // June already has a different expense
+      await createBudget("2026-06");
+      await createExpense({
+        budgetId: "budget-2026-06",
+        description: "Mercado",
+        amount: 800000,
+        categoryId: "cat-mercado",
+        isRecurring: false,
+      });
+
+      const copies = await createRecurringCopies(expense, "2026-05");
+      expect(copies).toBe(2); // Jun + Jul
+
+      // June should now have both expenses
+      const junExpenses = await getMonthExpenses("2026-06");
+      expect(junExpenses).toHaveLength(2);
+      const descriptions = junExpenses.map((e) => e.description).sort();
+      expect(descriptions).toEqual(["Admin", "Mercado"]);
     });
   });
 });

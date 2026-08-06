@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, Check, X, Copy } from "lucide-react";
 import { CategoryChangeDropdown } from "@/components/category-change-dropdown";
-import { copyExpensesFromPreviousMonth } from "@/lib/recurring";
+import { copyExpensesFromPreviousMonth, createRecurringCopies } from "@/lib/recurring";
 
 export const Route = createFileRoute("/gastos")({
   component: GastosPage,
@@ -93,19 +93,30 @@ function GastosPage() {
   }) {
     const budgetId = await ensureBudget();
     const id = `exp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    await db.expenses.add({
+    const newExpense = {
       id,
       budgetId,
       categoryId: data.categoryId,
       description: data.description,
       amount: data.amount,
       previousAmount: 0,
-      paymentSource: "bancolombia",
-      status: "pending",
+      paymentSource: "bancolombia" as const,
+      status: "pending" as const,
       isRecurring: data.isRecurring,
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    };
+    await db.expenses.add(newExpense);
+
+    // If recurring, immediately create copies in future months
+    if (data.isRecurring) {
+      const copies = await createRecurringCopies(newExpense, selectedMonth);
+      if (copies > 0) {
+        setToast(`Gasto recurrente creado en ${copies} meses`);
+        setTimeout(() => setToast(null), 4000);
+      }
+    }
+
     setShowAddForm(false);
   }
 
@@ -137,10 +148,21 @@ function GastosPage() {
   }
 
   async function handleToggleRecurring(expense: Expense) {
+    const newIsRecurring = !expense.isRecurring;
     await db.expenses.update(expense.id, {
-      isRecurring: !expense.isRecurring,
+      isRecurring: newIsRecurring,
       updatedAt: new Date(),
     });
+
+    // When toggling ON, create copies in future months
+    if (newIsRecurring) {
+      const updatedExpense = { ...expense, isRecurring: true };
+      const copies = await createRecurringCopies(updatedExpense, selectedMonth);
+      if (copies > 0) {
+        setToast(`Gasto replicado en ${copies} meses`);
+        setTimeout(() => setToast(null), 4000);
+      }
+    }
   }
 
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);

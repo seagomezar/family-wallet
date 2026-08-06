@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { db, type Expense, type Category, type Budget } from '@/db/schema';
-import { autoPopulateRecurring, copyExpensesFromPreviousMonth } from '@/lib/recurring';
+import { createRecurringCopies, copyExpensesFromPreviousMonth } from '@/lib/recurring';
+import * as currency from '@/lib/currency';
 
 // ─── Test Fixtures ───────────────────────────────────────────────────
 
@@ -270,7 +271,9 @@ describe('Change Expense Category', () => {
       expect(juneExpenses[0]!.description).toBe('Netflix');
     });
 
-    it('autoPopulateRecurring uses new categoryId after move', async () => {
+    it('createRecurringCopies uses new categoryId after move', async () => {
+      vi.spyOn(currency, 'currentMonthKey').mockReturnValue('2026-06');
+
       // Previous month setup
       const prevBudgetId = 'budget-2026-05';
       await db.budgets.add({
@@ -281,33 +284,26 @@ describe('Change Expense Category', () => {
         updatedAt: new Date('2026-05-01'),
       });
 
-      await db.expenses.bulkAdd([
-        makeExpense({
-          id: 'exp-rec-auto1',
-          budgetId: prevBudgetId,
-          categoryId: CAT_A_ID,
-          description: 'Spotify',
-          isRecurring: true,
-          amount: 25000,
-        }),
-        makeExpense({
-          id: 'exp-nonrec',
-          budgetId: prevBudgetId,
-          categoryId: CAT_A_ID,
-          description: 'One-time purchase',
-          isRecurring: false,
-          amount: 500000,
-        }),
-      ]);
+      const recurringExpense = makeExpense({
+        id: 'exp-rec-auto1',
+        budgetId: prevBudgetId,
+        categoryId: CAT_A_ID,
+        description: 'Spotify',
+        isRecurring: true,
+        amount: 25000,
+      });
+      await db.expenses.add(recurringExpense);
 
       // Move the recurring expense to CAT_C
       await changeExpenseCategory('exp-rec-auto1', CAT_C_ID);
 
-      // Remove June budget to allow auto-populate
+      // Retrieve the updated expense and create copies
+      const updated = await db.expenses.get('exp-rec-auto1');
+      // Remove June budget to allow fresh creation
       await db.budgets.delete(BUDGET_ID);
 
-      const result = await autoPopulateRecurring('2026-06');
-      expect(result.populated).toBe(1);
+      const copies = await createRecurringCopies(updated!, '2026-05');
+      expect(copies).toBe(1);
 
       const juneExpenses = await db.expenses
         .where('budgetId')
@@ -316,6 +312,8 @@ describe('Change Expense Category', () => {
       expect(juneExpenses).toHaveLength(1);
       expect(juneExpenses[0]!.categoryId).toBe(CAT_C_ID);
       expect(juneExpenses[0]!.isRecurring).toBe(true);
+
+      vi.restoreAllMocks();
     });
   });
 
