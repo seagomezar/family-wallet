@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { db, type Expense, type ExpenseStatus } from "@/db/schema";
 import { useUIStore } from "@/stores/ui";
 import { formatCOP, formatDelta } from "@/lib/currency";
@@ -11,10 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, Check, X, Copy } from "lucide-react";
 import { CategoryChangeDropdown } from "@/components/category-change-dropdown";
-import {
-  copyExpensesFromPreviousMonth,
-  autoPopulateRecurring,
-} from "@/lib/recurring";
+import { copyExpensesFromPreviousMonth } from "@/lib/recurring";
 
 export const Route = createFileRoute("/gastos")({
   component: GastosPage,
@@ -31,7 +28,6 @@ function GastosPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [copyWarning, setCopyWarning] = useState(false);
   const [categoryToast, setCategoryToast] = useState<string | null>(null);
-  const autoPopulatedRef = useRef<string | null>(null);
 
   const budget = useLiveQuery(
     () => db.budgets.where("month").equals(selectedMonth).first(),
@@ -47,21 +43,6 @@ function GastosPage() {
     db.categories.orderBy("order").toArray(),
   );
 
-  // Auto-populate recurring expenses when navigating to an empty month
-  useEffect(() => {
-    if (autoPopulatedRef.current === selectedMonth) return;
-    autoPopulatedRef.current = selectedMonth;
-
-    // Small delay to let useLiveQuery resolve
-    const timer = setTimeout(async () => {
-      const count = await autoPopulateRecurring(selectedMonth);
-      if (count > 0) {
-        setToast(`Se copiaron ${count} gastos recurrentes del mes anterior`);
-        setTimeout(() => setToast(null), 4000);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [selectedMonth]);
 
   async function handleCopyFromPrevious() {
     const result = await copyExpensesFromPreviousMonth(selectedMonth);
