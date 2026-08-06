@@ -38,7 +38,7 @@ function AjustesPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `billetera-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `family-wallet-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }

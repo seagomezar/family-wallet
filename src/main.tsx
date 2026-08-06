@@ -8,7 +8,7 @@ import "./globals.css";
 // Create router instance
 const router = createRouter({
   routeTree,
-  basepath: '/la-billetera-de-sebastian',
+  basepath: '/family-wallet',
 });
 
 // Register the router for type safety

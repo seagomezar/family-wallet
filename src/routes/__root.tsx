@@ -24,7 +24,7 @@ function RootLayout() {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
-          <h1 className="text-lg font-bold text-primary">💰 Billetera</h1>
+          <h1 className="text-lg font-bold text-primary">💰 Family Wallet</h1>
           <MonthSelector />
         </div>
       </header>

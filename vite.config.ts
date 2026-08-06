@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
-  base: '/la-billetera-de-sebastian/',
+  base: '/family-wallet/',
   plugins: [
     TanStackRouterVite({
       routesDirectory: './src/routes',
@@ -16,8 +16,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'icons/*.png'],
       manifest: {
-        name: 'La Billetera de Sebastián',
-        short_name: 'Billetera',
+        name: 'Family Wallet',
+        short_name: 'Family Wallet',
         description: 'Gestor financiero familiar',
         theme_color: '#059669',
         background_color: '#ffffff',
