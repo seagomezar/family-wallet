@@ -75,13 +75,25 @@ export async function copyExpensesFromPreviousMonth(
 }
 
 /**
+ * Result of auto-populating recurring expenses.
+ */
+export interface AutoPopulateResult {
+  populated: number; // number of expenses created
+  reason:
+    | "populated" // success: expenses were created
+    | "already_has_expenses" // month has data, don't retry
+    | "no_source_data" // no prior month found with data, allow retry
+    | "no_recurring_in_source"; // source found but no recurring items, don't retry
+}
+
+/**
  * Auto-populate recurring expenses for a month that has no data yet.
  * Only copies expenses marked as isRecurring from the most recent month with data.
- * Returns number of recurring items populated.
+ * Returns a result object with populated count and reason.
  */
 export async function autoPopulateRecurring(
   currentMonth: string,
-): Promise<number> {
+): Promise<AutoPopulateResult> {
   // Check if current month already has expenses
   const currentBudget = await db.budgets
     .where("month")
@@ -93,7 +105,7 @@ export async function autoPopulateRecurring(
       .equals(currentBudget.id)
       .count();
     if (existingCount > 0) {
-      return 0;
+      return { populated: 0, reason: "already_has_expenses" };
     }
   }
 
@@ -116,7 +128,7 @@ export async function autoPopulateRecurring(
     searchMonth = previousMonthKey(searchMonth);
   }
 
-  if (!sourceBudget) return 0;
+  if (!sourceBudget) return { populated: 0, reason: "no_source_data" };
 
   // Get only recurring expenses from the source month
   const recurringExpenses = await db.expenses
@@ -125,7 +137,9 @@ export async function autoPopulateRecurring(
     .filter((e) => e.isRecurring)
     .toArray();
 
-  if (recurringExpenses.length === 0) return 0;
+  if (recurringExpenses.length === 0) {
+    return { populated: 0, reason: "no_recurring_in_source" };
+  }
 
   // Ensure budget exists for current month
   const budgetId = currentBudget?.id ?? `budget-${currentMonth}`;
@@ -156,5 +170,5 @@ export async function autoPopulateRecurring(
   }));
 
   await db.expenses.bulkAdd(newExpenses);
-  return newExpenses.length;
+  return { populated: newExpenses.length, reason: "populated" };
 }

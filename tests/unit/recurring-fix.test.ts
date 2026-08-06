@@ -57,8 +57,9 @@ describe("Recurring Expenses – Auto-Populate Fix", () => {
         isRecurring: true,
       });
 
-      const count = await autoPopulateRecurring("2026-08");
-      expect(count).toBe(1);
+      const result = await autoPopulateRecurring("2026-08");
+      expect(result.populated).toBe(1);
+      expect(result.reason).toBe("populated");
 
       const newBudget = await db.budgets
         .where("month")
@@ -84,8 +85,9 @@ describe("Recurring Expenses – Auto-Populate Fix", () => {
         isRecurring: false,
       });
 
-      const count = await autoPopulateRecurring("2026-08");
-      expect(count).toBe(0);
+      const result = await autoPopulateRecurring("2026-08");
+      expect(result.populated).toBe(0);
+      expect(result.reason).toBe("no_recurring_in_source");
 
       const newBudget = await db.budgets
         .where("month")
@@ -130,8 +132,9 @@ describe("Recurring Expenses – Auto-Populate Fix", () => {
         amount: 30000,
       });
 
-      const count = await autoPopulateRecurring("2026-08");
-      expect(count).toBe(3);
+      const result = await autoPopulateRecurring("2026-08");
+      expect(result.populated).toBe(3);
+      expect(result.reason).toBe("populated");
 
       const newBudget = await db.budgets
         .where("month")
@@ -229,11 +232,13 @@ describe("Recurring Expenses – Auto-Populate Fix", () => {
         isRecurring: true,
       });
 
-      const firstCount = await autoPopulateRecurring("2026-08");
-      expect(firstCount).toBe(1);
+      const firstResult = await autoPopulateRecurring("2026-08");
+      expect(firstResult.populated).toBe(1);
+      expect(firstResult.reason).toBe("populated");
 
-      const secondCount = await autoPopulateRecurring("2026-08");
-      expect(secondCount).toBe(0);
+      const secondResult = await autoPopulateRecurring("2026-08");
+      expect(secondResult.populated).toBe(0);
+      expect(secondResult.reason).toBe("already_has_expenses");
 
       // Verify only 1 expense exists
       const newBudget = await db.budgets
@@ -265,8 +270,9 @@ describe("Recurring Expenses – Auto-Populate Fix", () => {
         isRecurring: false,
       });
 
-      const count = await autoPopulateRecurring("2026-08");
-      expect(count).toBe(0);
+      const result = await autoPopulateRecurring("2026-08");
+      expect(result.populated).toBe(0);
+      expect(result.reason).toBe("already_has_expenses");
 
       // Verify no new expenses were added
       const expenses = await db.expenses
@@ -287,8 +293,9 @@ describe("Recurring Expenses – Auto-Populate Fix", () => {
         isRecurring: true,
       });
 
-      const count = await autoPopulateRecurring("2026-07");
-      expect(count).toBe(1);
+      const result = await autoPopulateRecurring("2026-07");
+      expect(result.populated).toBe(1);
+      expect(result.reason).toBe("populated");
 
       const newBudget = await db.budgets
         .where("month")
@@ -326,8 +333,9 @@ describe("Recurring Expenses – Auto-Populate Fix", () => {
         isRecurring: true,
       });
 
-      const count = await autoPopulateRecurring("2026-08");
-      expect(count).toBe(3);
+      const result = await autoPopulateRecurring("2026-08");
+      expect(result.populated).toBe(3);
+      expect(result.reason).toBe("populated");
 
       const newBudget = await db.budgets
         .where("month")
@@ -353,6 +361,51 @@ describe("Recurring Expenses – Auto-Populate Fix", () => {
       const netflix = newExpenses.find((e) => e.description === "Netflix");
       expect(netflix!.amount).toBe(45000);
       expect(netflix!.categoryId).toBe("cat-entretenimiento");
+    });
+
+    it("11b. returns no_source_data when no previous month has data", async () => {
+      const result = await autoPopulateRecurring("2026-08");
+      expect(result.populated).toBe(0);
+      expect(result.reason).toBe("no_source_data");
+    });
+
+    it("11c. QA scenario: retry works after adding data to prior month", async () => {
+      // Step 1: August has no source data (July is empty)
+      const result1 = await autoPopulateRecurring("2026-08");
+      expect(result1.populated).toBe(0);
+      expect(result1.reason).toBe("no_source_data");
+
+      // Step 2: User adds recurring expenses to July
+      await createBudget("2026-07");
+      await createExpense({
+        budgetId: "budget-2026-07",
+        description: "Internet Hogar",
+        amount: 120000,
+        isRecurring: true,
+      });
+      await createExpense({
+        budgetId: "budget-2026-07",
+        description: "Admin Edificio",
+        amount: 500000,
+        isRecurring: true,
+      });
+
+      // Step 3: Retry for August should now succeed
+      const result2 = await autoPopulateRecurring("2026-08");
+      expect(result2.populated).toBe(2);
+      expect(result2.reason).toBe("populated");
+
+      const newBudget = await db.budgets
+        .where("month")
+        .equals("2026-08")
+        .first();
+      const newExpenses = await db.expenses
+        .where("budgetId")
+        .equals(newBudget!.id)
+        .toArray();
+      expect(newExpenses).toHaveLength(2);
+      const descriptions = newExpenses.map((e) => e.description).sort();
+      expect(descriptions).toEqual(["Admin Edificio", "Internet Hogar"]);
     });
   });
 

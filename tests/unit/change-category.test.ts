@@ -306,8 +306,8 @@ describe('Change Expense Category', () => {
       // Remove June budget to allow auto-populate
       await db.budgets.delete(BUDGET_ID);
 
-      const count = await autoPopulateRecurring('2026-06');
-      expect(count).toBe(1);
+      const result = await autoPopulateRecurring('2026-06');
+      expect(result.populated).toBe(1);
 
       const juneExpenses = await db.expenses
         .where('budgetId')

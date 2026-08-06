@@ -196,9 +196,10 @@ describe("Recurring Expenses", () => {
         },
       ]);
 
-      const count = await autoPopulateRecurring("2026-06");
+      const result = await autoPopulateRecurring("2026-06");
 
-      expect(count).toBe(2); // Only the 2 recurring ones
+      expect(result.populated).toBe(2); // Only the 2 recurring ones
+      expect(result.reason).toBe("populated");
 
       const newBudget = await db.budgets.where("month").equals("2026-06").first();
       expect(newBudget).toBeDefined();
@@ -261,8 +262,9 @@ describe("Recurring Expenses", () => {
         },
       ]);
 
-      const count = await autoPopulateRecurring("2026-06");
-      expect(count).toBe(0);
+      const result = await autoPopulateRecurring("2026-06");
+      expect(result.populated).toBe(0);
+      expect(result.reason).toBe("already_has_expenses");
     });
 
     it("searches up to 12 months back to find data", async () => {
@@ -288,8 +290,9 @@ describe("Recurring Expenses", () => {
         updatedAt: new Date(),
       });
 
-      const count = await autoPopulateRecurring("2026-06");
-      expect(count).toBe(1);
+      const result = await autoPopulateRecurring("2026-06");
+      expect(result.populated).toBe(1);
+      expect(result.reason).toBe("populated");
 
       const newBudget = await db.budgets.where("month").equals("2026-06").first();
       const newExpenses = await db.expenses
@@ -322,8 +325,15 @@ describe("Recurring Expenses", () => {
         updatedAt: new Date(),
       });
 
-      const count = await autoPopulateRecurring("2026-06");
-      expect(count).toBe(0);
+      const result = await autoPopulateRecurring("2026-06");
+      expect(result.populated).toBe(0);
+      expect(result.reason).toBe("no_recurring_in_source");
+    });
+
+    it("returns no_source_data when no previous month has data", async () => {
+      const result = await autoPopulateRecurring("2026-06");
+      expect(result.populated).toBe(0);
+      expect(result.reason).toBe("no_source_data");
     });
 
     it("sets previousAmount from source expense amount", async () => {

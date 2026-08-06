@@ -12,6 +12,10 @@ import { autoPopulateRecurring } from "@/lib/recurring";
  * - Uses useLiveQuery to reactively detect expense count (no race condition)
  * - Tracks populated months in a session-level Set (not persisted) to avoid
  *   re-populating if user manually deletes all expenses
+ * - Only marks a month as "done" when population succeeded or the month
+ *   legitimately has no source data to retry (see AutoPopulateResult.reason)
+ * - Does NOT mark the month when no source data was found, allowing retry
+ *   after user adds data to a prior month
  * - Runs globally from __root.tsx so it works from any page
  * - Returns a toast message when expenses are copied (consumed by root layout)
  */
@@ -47,17 +51,26 @@ export function useAutoRecurring(onToast: (msg: string) => void) {
     if (isRunningRef.current) return;
 
     isRunningRef.current = true;
-    populatedMonths.add(selectedMonth);
 
     autoPopulateRecurring(selectedMonth)
-      .then((count) => {
-        if (count > 0) {
-          onToast(`Se copiaron ${count} gastos recurrentes del mes anterior`);
+      .then((result) => {
+        if (result.populated > 0) {
+          onToast(
+            `Se copiaron ${result.populated} gastos recurrentes del mes anterior`,
+          );
+        }
+
+        // Only mark the month as done when we should NOT retry:
+        // - 'populated': success, don't re-populate
+        // - 'already_has_expenses': month has data, don't retry
+        // - 'no_recurring_in_source': source found but nothing recurring, don't retry
+        // Do NOT mark for 'no_source_data' — allow retry when user adds data later
+        if (result.reason !== "no_source_data") {
+          populatedMonths.add(selectedMonth);
         }
       })
       .catch(() => {
-        // If it failed, allow retry next time
-        populatedMonths.delete(selectedMonth);
+        // If it failed, allow retry next time (don't add to Set)
       })
       .finally(() => {
         isRunningRef.current = false;
