@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db, type Expense, type ExpenseStatus } from "@/db/schema";
 import { useUIStore } from "@/stores/ui";
 import { formatCOP, formatDelta } from "@/lib/currency";
@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Check, X } from "lucide-react";
+import { Plus, Trash2, Check, X, Copy } from "lucide-react";
+import {
+  copyExpensesFromPreviousMonth,
+  autoPopulateRecurring,
+} from "@/lib/recurring";
 
 export const Route = createFileRoute("/gastos")({
   component: GastosPage,
@@ -23,6 +27,9 @@ function GastosPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+  const [copyWarning, setCopyWarning] = useState(false);
+  const autoPopulatedRef = useRef<string | null>(null);
 
   const budget = useLiveQuery(
     () => db.budgets.where("month").equals(selectedMonth).first(),
@@ -37,6 +44,36 @@ function GastosPage() {
   const categories = useLiveQuery(() =>
     db.categories.orderBy("order").toArray(),
   );
+
+  // Auto-populate recurring expenses when navigating to an empty month
+  useEffect(() => {
+    if (autoPopulatedRef.current === selectedMonth) return;
+    autoPopulatedRef.current = selectedMonth;
+
+    // Small delay to let useLiveQuery resolve
+    const timer = setTimeout(async () => {
+      const count = await autoPopulateRecurring(selectedMonth);
+      if (count > 0) {
+        setToast(`Se copiaron ${count} gastos recurrentes del mes anterior`);
+        setTimeout(() => setToast(null), 4000);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [selectedMonth]);
+
+  async function handleCopyFromPrevious() {
+    const result = await copyExpensesFromPreviousMonth(selectedMonth);
+    if (result.alreadyHasExpenses) {
+      setCopyWarning(true);
+      setTimeout(() => setCopyWarning(false), 4000);
+    } else if (result.copied > 0) {
+      setToast(`Se copiaron ${result.copied} gastos del mes anterior`);
+      setTimeout(() => setToast(null), 4000);
+    } else {
+      setToast("No hay gastos en el mes anterior para copiar");
+      setTimeout(() => setToast(null), 4000);
+    }
+  }
 
   const filteredExpenses = (expenses ?? []).filter((e) => {
     if (filter === "pending") return e.status === "pending";
@@ -69,6 +106,7 @@ function GastosPage() {
     categoryId: string;
     description: string;
     amount: number;
+    isRecurring: boolean;
   }) {
     const budgetId = await ensureBudget();
     const id = `exp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -81,7 +119,7 @@ function GastosPage() {
       previousAmount: 0,
       paymentSource: "bancolombia",
       status: "pending",
-      isRecurring: false,
+      isRecurring: data.isRecurring,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -115,12 +153,33 @@ function GastosPage() {
     setEditValue(expense.amount.toString());
   }
 
+  async function handleToggleRecurring(expense: Expense) {
+    await db.expenses.update(expense.id, {
+      isRecurring: !expense.isRecurring,
+      updatedAt: new Date(),
+    });
+  }
+
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <div className="space-y-4 pb-20 md:pb-6 md:pl-56" data-tour="expenses">
-      {/* Filter tabs */}
-      <div className="flex gap-2">
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-card border border-border rounded-lg shadow-lg px-4 py-3 text-sm font-medium animate-in fade-in slide-in-from-top-2">
+          {toast}
+        </div>
+      )}
+
+      {/* Copy warning */}
+      {copyWarning && (
+        <div className="bg-warning/10 border border-warning/30 text-warning rounded-lg px-4 py-3 text-sm">
+          ⚠️ Este mes ya tiene gastos registrados. Elimina los gastos existentes antes de copiar del mes anterior.
+        </div>
+      )}
+
+      {/* Filter tabs + Copy button */}
+      <div className="flex flex-wrap gap-2">
         {(["all", "pending", "paid"] as const).map((tab) => (
           <Button
             key={tab}
@@ -135,9 +194,20 @@ function GastosPage() {
                 : "Pagados"}
           </Button>
         ))}
-        <div className="ml-auto text-sm text-muted-foreground self-center">
-          Total: {formatCOP(totalExpenses)}
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCopyFromPrevious}
+          className="ml-auto"
+          title="Copiar gastos del mes anterior"
+        >
+          <Copy className="h-3.5 w-3.5 mr-1" />
+          Copiar mes anterior
+        </Button>
+      </div>
+
+      <div className="flex justify-end text-sm text-muted-foreground">
+        Total: {formatCOP(totalExpenses)}
       </div>
 
       {/* Expense groups */}
@@ -191,6 +261,9 @@ function GastosPage() {
                   {/* Description */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
+                      {expense.isRecurring && (
+                        <span className="mr-1" title="Gasto recurrente">🔁</span>
+                      )}
                       {expense.description}
                     </p>
                     {expense.previousAmount > 0 && (
@@ -254,6 +327,21 @@ function GastosPage() {
                     </button>
                   )}
 
+                  {/* Recurring toggle */}
+                  <button
+                    onClick={() => handleToggleRecurring(expense)}
+                    className={cn(
+                      "h-7 w-7 flex items-center justify-center rounded-md text-xs transition-colors",
+                      expense.isRecurring
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted"
+                    )}
+                    title={expense.isRecurring ? "Quitar recurrente" : "Marcar como recurrente"}
+                    aria-label={expense.isRecurring ? "Quitar recurrente" : "Marcar como recurrente"}
+                  >
+                    🔁
+                  </button>
+
                   {/* Status badge */}
                   <Badge
                     variant={
@@ -315,12 +403,14 @@ function AddExpenseForm({
     categoryId: string;
     description: string;
     amount: number;
+    isRecurring: boolean;
   }) => void;
   onCancel: () => void;
 }) {
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const [isRecurring, setIsRecurring] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -336,6 +426,7 @@ function AddExpenseForm({
       categoryId,
       description: description.trim(),
       amount: numAmount,
+      isRecurring,
     });
   }
 
@@ -385,6 +476,32 @@ function AddExpenseForm({
               onChange={(e) => setAmount(e.target.value)}
               placeholder="500000"
             />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsRecurring(!isRecurring)}
+              className={cn(
+                "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                isRecurring ? "bg-primary" : "bg-muted",
+              )}
+              role="switch"
+              aria-checked={isRecurring}
+              aria-label="Gasto recurrente"
+            >
+              <span
+                className={cn(
+                  "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
+                  isRecurring ? "translate-x-4" : "translate-x-0",
+                )}
+              />
+            </button>
+            <label className="text-sm font-medium cursor-pointer" onClick={() => setIsRecurring(!isRecurring)}>
+              🔁 Recurrente
+            </label>
+            <span className="text-xs text-muted-foreground">
+              (se copia automáticamente al siguiente mes)
+            </span>
           </div>
           <div className="flex gap-2">
             <Button type="submit">Guardar</Button>

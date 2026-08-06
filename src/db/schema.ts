@@ -118,6 +118,15 @@ export class BilleteraDB extends Dexie {
       categorizationRules: 'id, pattern, categoryId, source, matchCount',
       settings: 'key',
     });
+    this.version(4).stores({
+      budgets: 'id, month',
+      categories: 'id, name, order, type',
+      expenses: 'id, budgetId, categoryId, status, isRecurring, [budgetId+categoryId]',
+      bankTransactions: 'id, importBatch, transactionDate, categoryId, status',
+      savingsGoals: 'id, name',
+      categorizationRules: 'id, pattern, categoryId, source, matchCount',
+      settings: 'key',
+    });
   }
 }
 

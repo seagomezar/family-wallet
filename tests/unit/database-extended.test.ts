@@ -26,8 +26,8 @@ describe('Database Schema & Operations - Extended', () => {
       expect(db.categorizationRules).toBeDefined();
     });
 
-    it('db version is 2', () => {
-      expect(db.verno).toBe(2);
+    it('db version is 4', () => {
+      expect(db.verno).toBe(4);
     });
   });
 

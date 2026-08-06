@@ -24,6 +24,7 @@ export function TourOverlay() {
   const step = TOUR_STEPS[currentStep];
   const isFirst = currentStep === 0;
   const isLast = currentStep === TOUR_STEPS.length - 1;
+  const isSmallViewport = typeof window !== 'undefined' && window.innerHeight < 700;
 
   // Navigate to the correct route when step changes
   useEffect(() => {
@@ -44,24 +45,36 @@ export function TourOverlay() {
       return;
     }
 
-    const rect = el.getBoundingClientRect();
-    const padding = 8;
-    setTargetRect({
-      top: rect.top - padding,
-      left: rect.left - padding,
-      width: rect.width + padding * 2,
-      height: rect.height + padding * 2,
+    // Scroll into view first, then measure after scroll settles
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Use a small delay to let scroll finish before measuring
+    requestAnimationFrame(() => {
+      const rect = el.getBoundingClientRect();
+      const padding = 8;
+      setTargetRect({
+        top: rect.top - padding,
+        left: rect.left - padding,
+        width: rect.width + padding * 2,
+        height: rect.height + padding * 2,
+      });
+
+      // Decide tooltip position: prefer above on small viewports
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const minTooltipSpace = isSmallViewport ? 150 : 200;
+
+      if (spaceBelow >= minTooltipSpace) {
+        setTooltipPosition('bottom');
+      } else if (spaceAbove >= minTooltipSpace) {
+        setTooltipPosition('top');
+      } else {
+        // Not enough space either way — prefer whichever has more
+        setTooltipPosition(spaceAbove > spaceBelow ? 'top' : 'bottom');
+      }
     });
-
-    // Scroll into view if needed
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Decide tooltip position
-    const viewportHeight = window.innerHeight;
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    setTooltipPosition(spaceBelow > 200 || spaceBelow > spaceAbove ? 'bottom' : 'top');
-  }, [isActive, step?.targetSelector]);
+  }, [isActive, step?.targetSelector, isSmallViewport]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -107,11 +120,21 @@ export function TourOverlay() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isActive, currentStep]);
 
-  // Focus trap
+  // Focus trap + ensure tooltip is in viewport
   useEffect(() => {
     if (!isActive) return;
     const timer = setTimeout(() => {
-      tooltipRef.current?.focus();
+      if (tooltipRef.current) {
+        tooltipRef.current.focus();
+        // Ensure tooltip is fully visible in viewport
+        const rect = tooltipRef.current.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight) {
+          tooltipRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+        if (rect.top < 0) {
+          tooltipRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
     }, 400);
     return () => clearTimeout(timer);
   }, [isActive, currentStep]);
@@ -168,6 +191,7 @@ export function TourOverlay() {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
+        maxHeight: `${window.innerHeight - 32}px`,
       };
     }
 
@@ -176,20 +200,31 @@ export function TourOverlay() {
     // Clamp to viewport
     left = Math.max(16, Math.min(left, window.innerWidth - tooltipWidth - 16));
 
+    const viewportHeight = window.innerHeight;
+    const gap = 12;
+
     if (tooltipPosition === 'bottom') {
+      const topPos = targetRect.top + targetRect.height + gap;
+      const maxH = viewportHeight - topPos - 16;
       return {
         position: 'fixed',
-        top: `${targetRect.top + targetRect.height + 12}px`,
+        top: `${topPos}px`,
         left: `${left}px`,
         width: `${tooltipWidth}px`,
+        maxHeight: `${Math.max(maxH, 120)}px`,
+        overflowY: 'auto',
       };
     }
 
+    const bottomPos = viewportHeight - targetRect.top + gap;
+    const maxH = viewportHeight - bottomPos - 16;
     return {
       position: 'fixed',
-      bottom: `${window.innerHeight - targetRect.top + 12}px`,
+      bottom: `${bottomPos}px`,
       left: `${left}px`,
       width: `${tooltipWidth}px`,
+      maxHeight: `${Math.max(maxH, 120)}px`,
+      overflowY: 'auto',
     };
   };
 
@@ -228,7 +263,8 @@ export function TourOverlay() {
       <div
         ref={tooltipRef}
         className={cn(
-          'bg-card rounded-xl shadow-2xl border border-border p-5 transition-all duration-300',
+          'bg-card rounded-xl shadow-2xl border border-border transition-all duration-300',
+          isSmallViewport ? 'p-3' : 'p-5',
           isAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
         )}
         style={tooltipStyle()}
@@ -238,7 +274,7 @@ export function TourOverlay() {
         aria-describedby="tour-desc"
       >
         {/* Progress dots */}
-        <div className="flex items-center justify-center gap-1.5 mb-3">
+        <div className={cn('flex items-center justify-center gap-1.5', isSmallViewport ? 'mb-2' : 'mb-3')}>
           {TOUR_STEPS.map((_, i) => (
             <div
               key={i}
@@ -257,11 +293,11 @@ export function TourOverlay() {
         {/* Content */}
         <h3
           id="tour-title"
-          className="text-base font-semibold text-foreground mb-2"
+          className={cn('font-semibold text-foreground', isSmallViewport ? 'text-sm mb-1' : 'text-base mb-2')}
         >
           {step?.title}
         </h3>
-        <p id="tour-desc" className="text-sm text-muted-foreground leading-relaxed mb-4">
+        <p id="tour-desc" className={cn('text-muted-foreground leading-relaxed', isSmallViewport ? 'text-xs mb-3' : 'text-sm mb-4')}>
           {step?.description}
         </p>
 
@@ -272,7 +308,7 @@ export function TourOverlay() {
             className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
             aria-label="Saltar tutorial"
           >
-            Saltar tutorial
+            Saltar
           </button>
 
           <div className="flex items-center gap-2">
@@ -296,7 +332,7 @@ export function TourOverlay() {
         </div>
 
         {/* Step counter */}
-        <p className="text-[10px] text-muted-foreground text-center mt-3">
+        <p className={cn('text-[10px] text-muted-foreground text-center', isSmallViewport ? 'mt-2' : 'mt-3')}>
           Paso {currentStep + 1} de {TOUR_STEPS.length}
         </p>
       </div>

@@ -14,6 +14,7 @@ export function Progress({
   indicatorClassName,
 }: ProgressProps) {
   const percentage = Math.min((value / max) * 100, 100);
+  const rawPercentage = (value / max) * 100;
 
   return (
     <div
@@ -25,11 +26,11 @@ export function Progress({
       <div
         className={cn(
           "h-full rounded-full transition-all duration-300",
-          percentage > 100
+          rawPercentage > 100
             ? "bg-destructive"
-            : percentage > 80
+            : rawPercentage > 75
               ? "bg-warning"
-              : "bg-primary",
+              : "bg-positive",
           indicatorClassName,
         )}
         style={{ width: `${Math.min(percentage, 100)}%` }}

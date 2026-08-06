@@ -117,23 +117,36 @@ function Dashboard() {
               </span>
             </p>
           ) : (
-            categoryBreakdown.map((cat) => (
+            categoryBreakdown.map((cat) => {
+              const colorClass = cat.monthlyTarget > 0
+                ? cat.percentage > 100
+                  ? 'text-destructive'
+                  : cat.percentage > 75
+                    ? 'text-warning'
+                    : 'text-positive'
+                : 'text-foreground';
+              return (
               <div key={cat.id} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2">
                     <span>{cat.icon}</span>
                     <span className="font-medium">{cat.name}</span>
                   </span>
-                  <span className="text-muted-foreground">
-                    {formatCOP(cat.spent)}{" "}
-                    <span className="text-xs">
-                      / {formatCOP(cat.monthlyTarget)}
-                    </span>
+                  <span className={cn("tabular-nums", colorClass)}>
+                    <span className="font-semibold">{formatCOP(cat.spent)}</span>
+                    {cat.monthlyTarget > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {" "}/{" "}{formatCOP(cat.monthlyTarget)}
+                      </span>
+                    )}
                   </span>
                 </div>
-                <Progress value={cat.percentage} />
+                {cat.monthlyTarget > 0 && (
+                  <Progress value={cat.percentage} />
+                )}
               </div>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>
