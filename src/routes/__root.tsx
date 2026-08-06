@@ -1,5 +1,7 @@
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
-import { MonthSelector } from "@/components/month-selector";
+import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
+import { MonthSelector } from '@/components/month-selector';
+import { TourOverlay } from '@/components/tour-overlay';
+import { TourAutoStart } from '@/components/tour-auto-start';
 import {
   LayoutDashboard,
   List,
@@ -15,6 +17,10 @@ export const Route = createRootRoute({
 function RootLayout() {
   return (
     <div className="min-h-screen bg-background">
+      {/* Tour */}
+      <TourOverlay />
+      <TourAutoStart />
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">

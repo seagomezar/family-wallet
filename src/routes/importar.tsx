@@ -374,7 +374,7 @@ function ImportarPage() {
   // ─── Render ────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4 pb-20 md:pb-6 md:pl-56">
+    <div className="space-y-4 pb-20 md:pb-6 md:pl-56" data-tour="import">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Importar Extracto Bancario</h2>
         {step !== "upload" && step !== "confirm" && (

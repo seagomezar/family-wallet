@@ -118,7 +118,7 @@ function GastosPage() {
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
-    <div className="space-y-4 pb-20 md:pb-6 md:pl-56">
+    <div className="space-y-4 pb-20 md:pb-6 md:pl-56" data-tour="expenses">
       {/* Filter tabs */}
       <div className="flex gap-2">
         {(["all", "pending", "paid"] as const).map((tab) => (

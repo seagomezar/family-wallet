@@ -76,15 +76,21 @@ export interface CategorizationRule {
   createdAt: Date;
 }
 
+export interface AppSetting {
+  key: string;
+  value: unknown;
+}
+
 // ─── Database ────────────────────────────────────────────────────────
 
 export class BilleteraDB extends Dexie {
-  budgets!: EntityTable<Budget, "id">;
-  categories!: EntityTable<Category, "id">;
-  expenses!: EntityTable<Expense, "id">;
-  bankTransactions!: EntityTable<BankTransaction, "id">;
-  savingsGoals!: EntityTable<SavingsGoal, "id">;
-  categorizationRules!: EntityTable<CategorizationRule, "id">;
+  budgets!: EntityTable<Budget, 'id'>;
+  categories!: EntityTable<Category, 'id'>;
+  expenses!: EntityTable<Expense, 'id'>;
+  bankTransactions!: EntityTable<BankTransaction, 'id'>;
+  savingsGoals!: EntityTable<SavingsGoal, 'id'>;
+  categorizationRules!: EntityTable<CategorizationRule, 'id'>;
+  settings!: EntityTable<AppSetting, 'key'>;
 
   constructor() {
     super("BilleteraDB");
@@ -102,6 +108,15 @@ export class BilleteraDB extends Dexie {
       bankTransactions: "id, importBatch, transactionDate, categoryId, status",
       savingsGoals: "id, name",
       categorizationRules: "id, pattern, categoryId, source, matchCount",
+    });
+    this.version(3).stores({
+      budgets: 'id, month',
+      categories: 'id, name, order, type',
+      expenses: 'id, budgetId, categoryId, status, [budgetId+categoryId]',
+      bankTransactions: 'id, importBatch, transactionDate, categoryId, status',
+      savingsGoals: 'id, name',
+      categorizationRules: 'id, pattern, categoryId, source, matchCount',
+      settings: 'key',
     });
   }
 }

@@ -1,26 +1,20 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useLiveQuery } from "dexie-react-hooks";
-import { useState } from "react";
-import { db } from "@/db/schema";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Download, Upload, Database, Trash2 } from "lucide-react";
+import { createFileRoute } from '@tanstack/react-router';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useState } from 'react';
+import { db } from '@/db/schema';
+import { useTourStore } from '@/stores/tour';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Download, Upload, Database, Trash2, GraduationCap } from 'lucide-react';
 
 export const Route = createFileRoute("/ajustes")({
   component: AjustesPage,
 });
 
 function AjustesPage() {
-  const [importStatus, setImportStatus] = useState<
-    "idle" | "success" | "error"
-  >("idle");
-  const [importMessage, setImportMessage] = useState("");
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [importMessage, setImportMessage] = useState('');
+  const tourStart = useTourStore((s) => s.start);
 
   const budgetCount = useLiveQuery(() => db.budgets.count());
   const categoryCount = useLiveQuery(() => db.categories.count());
@@ -147,6 +141,11 @@ function AjustesPage() {
     );
   }
 
+  async function handleStartTour() {
+    await db.settings.put({ key: 'hasSeenTour', value: false });
+    tourStart();
+  }
+
   return (
     <div className="space-y-4 pb-20 md:pb-6 md:pl-56">
       <h2 className="text-xl font-bold">Ajustes y Datos</h2>
@@ -181,7 +180,7 @@ function AjustesPage() {
       </Card>
 
       {/* Export */}
-      <Card>
+      <Card data-tour="export">
         <CardHeader>
           <CardTitle className="text-base">Exportar Respaldo</CardTitle>
           <CardDescription>
@@ -240,6 +239,21 @@ function AjustesPage() {
         <CardContent>
           <Button variant="destructive" onClick={handleClearData}>
             <Trash2 className="h-4 w-4" /> Borrar todos los datos
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Tutorial */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <GraduationCap className="h-4 w-4" /> Tutorial
+          </CardTitle>
+          <CardDescription>Revisa el tutorial guiado de la app.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={handleStartTour}>
+            <GraduationCap className="h-4 w-4" /> Ver tutorial
           </Button>
         </CardContent>
       </Card>

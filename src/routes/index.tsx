@@ -50,7 +50,7 @@ function Dashboard() {
   return (
     <div className="space-y-6 pb-20 md:pb-6 md:pl-56">
       {/* LIBRE Hero */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden" data-tour="libre">
         <CardContent className="p-6">
           <div className="text-center">
             <p className="text-sm font-medium text-muted-foreground">LIBRE</p>
@@ -103,7 +103,7 @@ function Dashboard() {
       </div>
 
       {/* Category Breakdown */}
-      <Card>
+      <Card data-tour="categories">
         <CardHeader>
           <CardTitle className="text-lg">Gastos por Categoría</CardTitle>
         </CardHeader>

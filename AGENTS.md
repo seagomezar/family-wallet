@@ -14,6 +14,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - **PWA**: `vite-plugin-pwa` with Workbox precaching — fully offline
 - **Currency**: All amounts in COP (Colombian Pesos), formatting via `src/lib/currency.ts`
 - **Bank import**: Papa Parse with Bancolombia TSV adapter + rule-based auto-categorization
+- **Guided tour**: Custom spotlight overlay (`src/components/tour-overlay.tsx`) + Zustand store (`src/stores/tour.ts`); auto-starts on first visit, re-triggerable from Ajustes
 
 ## Commands
 
@@ -31,7 +32,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - PDF import uses `pdfjs-dist` with CDN worker (`src/lib/pdf-parser.ts`)
 - Pure parsing utils separated from pdfjs dependency for testability (`src/lib/pdf-parse-utils.ts`)
 - Auto-categorization engine with built-in rules + user learning rules (`src/lib/categorization.ts`)
-- DB schema is at version 2 (added `categorizationRules` table)
+- DB schema is at version 3 (added `settings` table for app settings like `hasSeenTour`)
 - Bank: Davibank/Davivienda savings account, Colombian format (period thousands, comma decimals)
 
 ## Maintaining this file
