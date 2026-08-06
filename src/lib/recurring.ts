@@ -1,5 +1,5 @@
 import { db, type Expense } from "@/db/schema";
-import { previousMonthKey } from "@/lib/currency";
+import { currentMonthKey, nextMonthKey, previousMonthKey } from "@/lib/currency";
 
 /**
  * Copy all expenses from the previous month to the current month.
@@ -78,7 +78,8 @@ export async function copyExpensesFromPreviousMonth(
  * Result of auto-populating recurring expenses.
  */
 export interface AutoPopulateResult {
-  populated: number; // number of expenses created
+  populated: number; // total number of expenses created across all months
+  monthsFilled: number; // number of months that were filled
   reason:
     | "populated" // success: expenses were created
     | "already_has_expenses" // month has data, don't retry
@@ -87,88 +88,173 @@ export interface AutoPopulateResult {
 }
 
 /**
- * Auto-populate recurring expenses for a month that has no data yet.
- * Only copies expenses marked as isRecurring from the most recent month with data.
- * Returns a result object with populated count and reason.
+ * Check if a month has any expenses in the database.
+ */
+async function monthHasExpenses(month: string): Promise<boolean> {
+  const budget = await db.budgets.where("month").equals(month).first();
+  if (!budget) return false;
+  const count = await db.expenses.where("budgetId").equals(budget.id).count();
+  return count > 0;
+}
+
+/**
+ * Get recurring expenses for a given month.
+ */
+async function getRecurringExpenses(month: string): Promise<Expense[]> {
+  const budget = await db.budgets.where("month").equals(month).first();
+  if (!budget) return [];
+  return db.expenses
+    .where("budgetId")
+    .equals(budget.id)
+    .filter((e) => e.isRecurring)
+    .toArray();
+}
+
+/**
+ * Auto-populate recurring expenses for a month, cascading forward from the
+ * most recent month with recurring data. Fills all intermediate empty months
+ * so that previousAmount references remain consistent.
+ *
+ * Cascade logic:
+ * 1. If target month already has expenses → skip
+ * 2. Search up to 12 months back to find the nearest month with recurring data
+ * 3. Build a list of months from source+1 to target
+ * 4. For each month in the list (capped at current calendar month):
+ *    - If it already has expenses, use its recurring data as the new "source" for subsequent months
+ *    - If empty, copy recurring from the current source, then treat it as the new source
+ * 5. Return total populated count and months filled
  */
 export async function autoPopulateRecurring(
-  currentMonth: string,
+  targetMonth: string,
 ): Promise<AutoPopulateResult> {
-  // Check if current month already has expenses
-  const currentBudget = await db.budgets
-    .where("month")
-    .equals(currentMonth)
-    .first();
-  if (currentBudget) {
-    const existingCount = await db.expenses
-      .where("budgetId")
-      .equals(currentBudget.id)
-      .count();
-    if (existingCount > 0) {
-      return { populated: 0, reason: "already_has_expenses" };
-    }
+  // 1. If target month already has expenses, skip
+  if (await monthHasExpenses(targetMonth)) {
+    return { populated: 0, monthsFilled: 0, reason: "already_has_expenses" };
   }
 
-  // Find the most recent month that has data (up to 12 months back)
-  let searchMonth = previousMonthKey(currentMonth);
-  let sourceBudget = null;
+  // 2. Find the most recent month with recurring data (up to 12 months back)
+  let searchMonth = previousMonthKey(targetMonth);
+  let sourceMonth: string | null = null;
+  let sourceRecurring: Expense[] = [];
+  let foundMonthWithData = false;
   for (let i = 0; i < 12; i++) {
-    sourceBudget = await db.budgets
+    const budget = await db.budgets
       .where("month")
       .equals(searchMonth)
       .first();
-    if (sourceBudget) {
+    if (budget) {
       const count = await db.expenses
         .where("budgetId")
-        .equals(sourceBudget.id)
+        .equals(budget.id)
         .count();
-      if (count > 0) break;
-      sourceBudget = null;
+      if (count > 0) {
+        foundMonthWithData = true;
+        // Check if this month has recurring expenses specifically
+        const recurring = await db.expenses
+          .where("budgetId")
+          .equals(budget.id)
+          .filter((e) => e.isRecurring)
+          .toArray();
+        if (recurring.length > 0) {
+          sourceMonth = searchMonth;
+          sourceRecurring = recurring;
+          break;
+        }
+      }
     }
     searchMonth = previousMonthKey(searchMonth);
   }
 
-  if (!sourceBudget) return { populated: 0, reason: "no_source_data" };
-
-  // Get only recurring expenses from the source month
-  const recurringExpenses = await db.expenses
-    .where("budgetId")
-    .equals(sourceBudget.id)
-    .filter((e) => e.isRecurring)
-    .toArray();
-
-  if (recurringExpenses.length === 0) {
-    return { populated: 0, reason: "no_recurring_in_source" };
+  if (!sourceMonth) {
+    // Distinguish: found data but no recurring vs no data at all
+    if (foundMonthWithData) {
+      return { populated: 0, monthsFilled: 0, reason: "no_recurring_in_source" };
+    }
+    return { populated: 0, monthsFilled: 0, reason: "no_source_data" };
   }
 
-  // Ensure budget exists for current month
-  const budgetId = currentBudget?.id ?? `budget-${currentMonth}`;
-  if (!currentBudget) {
-    await db.budgets.add({
-      id: budgetId,
-      month: currentMonth,
-      totalIncome: sourceBudget.totalIncome,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  // 3. Build list of months from source+1 to target (inclusive)
+  const monthsToFill: string[] = [];
+  const now = currentMonthKey();
+  let m = nextMonthKey(sourceMonth);
+  for (let i = 0; i < 12; i++) {
+    monthsToFill.push(m);
+    if (m === targetMonth) break;
+    // Don't fill months beyond the current calendar month
+    if (m > now) break;
+    m = nextMonthKey(m);
   }
 
-  // Copy recurring expenses
-  const now = new Date();
-  const newExpenses: Expense[] = recurringExpenses.map((exp) => ({
-    id: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    budgetId,
-    categoryId: exp.categoryId,
-    description: exp.description,
-    amount: exp.amount,
-    previousAmount: exp.amount,
-    paymentSource: exp.paymentSource,
-    status: "pending" as const,
-    isRecurring: true,
-    createdAt: now,
-    updatedAt: now,
-  }));
+  // 4. Cascade forward through each month
+  let totalPopulated = 0;
+  let monthsFilled = 0;
+  let currentSourceExpenses = sourceRecurring;
+  let currentSourceMonth = sourceMonth;
 
-  await db.expenses.bulkAdd(newExpenses);
-  return { populated: newExpenses.length, reason: "populated" };
+  for (const month of monthsToFill) {
+    // If this month already has expenses, update the source reference and continue
+    if (await monthHasExpenses(month)) {
+      const existing = await getRecurringExpenses(month);
+      if (existing.length > 0) {
+        currentSourceExpenses = existing;
+        currentSourceMonth = month;
+      }
+      continue;
+    }
+
+    // Get the source budget's income for the new budget
+    const sourceBudget = await db.budgets
+      .where("month")
+      .equals(currentSourceMonth)
+      .first();
+    const income = sourceBudget?.totalIncome ?? 0;
+
+    // Ensure budget exists for this month
+    const budgetId = `budget-${month}`;
+    const existingBudget = await db.budgets
+      .where("month")
+      .equals(month)
+      .first();
+    if (!existingBudget) {
+      await db.budgets.add({
+        id: budgetId,
+        month,
+        totalIncome: income,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+
+    const actualBudgetId = existingBudget?.id ?? budgetId;
+
+    // Copy recurring expenses with previousAmount from the source
+    const timestamp = new Date();
+    const newExpenses: Expense[] = currentSourceExpenses.map((exp) => ({
+      id: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      budgetId: actualBudgetId,
+      categoryId: exp.categoryId,
+      description: exp.description,
+      amount: exp.amount,
+      previousAmount: exp.amount,
+      paymentSource: exp.paymentSource,
+      status: "pending" as const,
+      isRecurring: true,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }));
+
+    await db.expenses.bulkAdd(newExpenses);
+    totalPopulated += newExpenses.length;
+    monthsFilled++;
+
+    // Use the just-created expenses as the source for the next month
+    currentSourceExpenses = newExpenses;
+    currentSourceMonth = month;
+  }
+
+  if (totalPopulated === 0) {
+    return { populated: 0, monthsFilled: 0, reason: "no_recurring_in_source" };
+  }
+
+  return { populated: totalPopulated, monthsFilled, reason: "populated" };
 }

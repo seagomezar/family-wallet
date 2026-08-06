@@ -267,7 +267,7 @@ describe("Recurring Expenses", () => {
       expect(result.reason).toBe("already_has_expenses");
     });
 
-    it("searches up to 12 months back to find data", async () => {
+    it("searches up to 12 months back to find data and cascades forward", async () => {
       // Data is 3 months back
       await db.budgets.add({
         id: "budget-2026-03",
@@ -291,9 +291,11 @@ describe("Recurring Expenses", () => {
       });
 
       const result = await autoPopulateRecurring("2026-06");
-      expect(result.populated).toBe(1);
+      // Cascades through Apr, May, Jun = 3 months × 1 expense
+      expect(result.populated).toBe(3);
       expect(result.reason).toBe("populated");
 
+      // Verify target month (June)
       const newBudget = await db.budgets.where("month").equals("2026-06").first();
       const newExpenses = await db.expenses
         .where("budgetId")
@@ -301,6 +303,12 @@ describe("Recurring Expenses", () => {
         .toArray();
       expect(newExpenses[0]!.description).toBe("Servicios");
       expect(newExpenses[0]!.previousAmount).toBe(300000);
+
+      // Verify intermediate months were filled
+      const aprBudget = await db.budgets.where("month").equals("2026-04").first();
+      expect(aprBudget).toBeDefined();
+      const mayBudget = await db.budgets.where("month").equals("2026-05").first();
+      expect(mayBudget).toBeDefined();
     });
 
     it("returns 0 when no recurring expenses exist", async () => {

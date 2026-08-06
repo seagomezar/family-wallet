@@ -55,9 +55,11 @@ export function useAutoRecurring(onToast: (msg: string) => void) {
     autoPopulateRecurring(selectedMonth)
       .then((result) => {
         if (result.populated > 0) {
-          onToast(
-            `Se copiaron ${result.populated} gastos recurrentes del mes anterior`,
-          );
+          const msg =
+            result.monthsFilled > 1
+              ? `Se copiaron ${result.populated} gastos recurrentes (${result.monthsFilled} meses)`
+              : `Se copiaron ${result.populated} gastos recurrentes del mes anterior`;
+          onToast(msg);
         }
 
         // Only mark the month as done when we should NOT retry:
