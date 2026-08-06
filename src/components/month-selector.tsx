@@ -1,12 +1,12 @@
-import { useUIStore } from '@/stores/ui';
+import { useUIStore } from "@/stores/ui";
 import {
   formatMonth,
   previousMonthKey,
   nextMonthKey,
   currentMonthKey,
-} from '@/lib/currency';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+} from "@/lib/currency";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function MonthSelector() {
   const { selectedMonth, setSelectedMonth } = useUIStore();

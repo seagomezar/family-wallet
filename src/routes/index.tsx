@@ -1,13 +1,13 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/db/schema';
-import { useUIStore } from '@/stores/ui';
-import { formatCOP, percentUsed } from '@/lib/currency';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+import { createFileRoute } from "@tanstack/react-router";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/db/schema";
+import { useUIStore } from "@/stores/ui";
+import { formatCOP, percentUsed } from "@/lib/currency";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
@@ -15,30 +15,37 @@ function Dashboard() {
   const selectedMonth = useUIStore((s) => s.selectedMonth);
 
   const budget = useLiveQuery(
-    () => db.budgets.where('month').equals(selectedMonth).first(),
-    [selectedMonth]
+    () => db.budgets.where("month").equals(selectedMonth).first(),
+    [selectedMonth],
   );
 
-  const expenses = useLiveQuery(
-    () => {
-      if (!budget) return [];
-      return db.expenses.where('budgetId').equals(budget.id).toArray();
-    },
-    [budget]
-  );
+  const expenses = useLiveQuery(() => {
+    if (!budget) return [];
+    return db.expenses.where("budgetId").equals(budget.id).toArray();
+  }, [budget]);
 
-  const categories = useLiveQuery(() => db.categories.orderBy('order').toArray());
+  const categories = useLiveQuery(() =>
+    db.categories.orderBy("order").toArray(),
+  );
 
   const totalIncome = budget?.totalIncome ?? 0;
   const totalExpenses = expenses?.reduce((sum, e) => sum + e.amount, 0) ?? 0;
   const libre = totalIncome - totalExpenses;
 
   // Group expenses by category
-  const categoryBreakdown = (categories ?? []).map((cat) => {
-    const catExpenses = (expenses ?? []).filter((e) => e.categoryId === cat.id);
-    const spent = catExpenses.reduce((sum, e) => sum + e.amount, 0);
-    return { ...cat, spent, percentage: percentUsed(spent, cat.monthlyTarget) };
-  }).filter((c) => c.spent > 0 || c.monthlyTarget > 0);
+  const categoryBreakdown = (categories ?? [])
+    .map((cat) => {
+      const catExpenses = (expenses ?? []).filter(
+        (e) => e.categoryId === cat.id,
+      );
+      const spent = catExpenses.reduce((sum, e) => sum + e.amount, 0);
+      return {
+        ...cat,
+        spent,
+        percentage: percentUsed(spent, cat.monthlyTarget),
+      };
+    })
+    .filter((c) => c.spent > 0 || c.monthlyTarget > 0);
 
   return (
     <div className="space-y-6 pb-20 md:pb-6 md:pl-56">
@@ -49,8 +56,8 @@ function Dashboard() {
             <p className="text-sm font-medium text-muted-foreground">LIBRE</p>
             <p
               className={cn(
-                'text-4xl font-bold tracking-tight md:text-5xl',
-                libre >= 0 ? 'text-positive' : 'text-negative'
+                "text-4xl font-bold tracking-tight md:text-5xl",
+                libre >= 0 ? "text-positive" : "text-negative",
               )}
             >
               {formatCOP(libre)}
@@ -58,11 +65,15 @@ function Dashboard() {
             <div className="mt-4 flex justify-center gap-8 text-sm">
               <div>
                 <p className="text-muted-foreground">Ingresos</p>
-                <p className="font-semibold text-positive">{formatCOP(totalIncome)}</p>
+                <p className="font-semibold text-positive">
+                  {formatCOP(totalIncome)}
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Gastos</p>
-                <p className="font-semibold text-negative">{formatCOP(totalExpenses)}</p>
+                <p className="font-semibold text-negative">
+                  {formatCOP(totalExpenses)}
+                </p>
               </div>
             </div>
           </div>
@@ -74,7 +85,9 @@ function Dashboard() {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Categorías</p>
-            <p className="text-xl font-bold">{categoryBreakdown.filter((c) => c.spent > 0).length}</p>
+            <p className="text-xl font-bold">
+              {categoryBreakdown.filter((c) => c.spent > 0).length}
+            </p>
             <p className="text-xs text-muted-foreground">con gastos</p>
           </CardContent>
         </Card>
@@ -82,7 +95,7 @@ function Dashboard() {
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Pendientes</p>
             <p className="text-xl font-bold text-warning">
-              {expenses?.filter((e) => e.status === 'pending').length ?? 0}
+              {expenses?.filter((e) => e.status === "pending").length ?? 0}
             </p>
             <p className="text-xs text-muted-foreground">por pagar</p>
           </CardContent>
@@ -99,7 +112,9 @@ function Dashboard() {
             <p className="text-center text-sm text-muted-foreground py-8">
               No hay gastos registrados este mes.
               <br />
-              <span className="text-xs">Ve a &quot;Gastos&quot; para agregar.</span>
+              <span className="text-xs">
+                Ve a &quot;Gastos&quot; para agregar.
+              </span>
             </p>
           ) : (
             categoryBreakdown.map((cat) => (
@@ -110,8 +125,10 @@ function Dashboard() {
                     <span className="font-medium">{cat.name}</span>
                   </span>
                   <span className="text-muted-foreground">
-                    {formatCOP(cat.spent)}{' '}
-                    <span className="text-xs">/ {formatCOP(cat.monthlyTarget)}</span>
+                    {formatCOP(cat.spent)}{" "}
+                    <span className="text-xs">
+                      / {formatCOP(cat.monthlyTarget)}
+                    </span>
                   </span>
                 </div>
                 <Progress value={cat.percentage} />

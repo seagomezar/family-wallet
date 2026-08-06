@@ -1,33 +1,40 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
-import { db, type Category, type CategoryType } from '@/db/schema';
-import { formatCOP } from '@/lib/currency';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { createFileRoute } from "@tanstack/react-router";
+import { useLiveQuery } from "dexie-react-hooks";
+import { useState } from "react";
+import { db, type Category, type CategoryType } from "@/db/schema";
+import { formatCOP } from "@/lib/currency";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Pencil, Trash2, X, Check } from "lucide-react";
 
-export const Route = createFileRoute('/categorias')({
+export const Route = createFileRoute("/categorias")({
   component: CategoriasPage,
 });
 
 function CategoriasPage() {
-  const categories = useLiveQuery(() => db.categories.orderBy('order').toArray());
+  const categories = useLiveQuery(() =>
+    db.categories.orderBy("order").toArray(),
+  );
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
-    const expenseCount = await db.expenses.where('categoryId').equals(id).count();
+    const expenseCount = await db.expenses
+      .where("categoryId")
+      .equals(id)
+      .count();
     if (expenseCount > 0) {
-      alert(`No se puede eliminar: hay ${expenseCount} gastos en esta categoría.`);
+      alert(
+        `No se puede eliminar: hay ${expenseCount} gastos en esta categoría.`,
+      );
       return;
     }
     await db.categories.delete(id);
   }
 
-  async function handleAdd(data: Omit<Category, 'id'>) {
+  async function handleAdd(data: Omit<Category, "id">) {
     const id = `cat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     await db.categories.add({ id, ...data });
     setShowAdd(false);
@@ -39,17 +46,20 @@ function CategoriasPage() {
   }
 
   const typeLabels: Record<CategoryType, string> = {
-    fixed: 'Fijo',
-    variable: 'Variable',
-    savings: 'Ahorro',
-    debt: 'Deuda',
+    fixed: "Fijo",
+    variable: "Variable",
+    savings: "Ahorro",
+    debt: "Deuda",
   };
 
-  const typeColors: Record<CategoryType, 'default' | 'success' | 'warning' | 'destructive'> = {
-    fixed: 'default',
-    variable: 'warning',
-    savings: 'success',
-    debt: 'destructive',
+  const typeColors: Record<
+    CategoryType,
+    "default" | "success" | "warning" | "destructive"
+  > = {
+    fixed: "default",
+    variable: "warning",
+    savings: "success",
+    debt: "destructive",
   };
 
   return (
@@ -89,7 +99,9 @@ function CategoriasPage() {
                     Meta: {formatCOP(cat.monthlyTarget)}
                   </p>
                 </div>
-                <Badge variant={typeColors[cat.type]}>{typeLabels[cat.type]}</Badge>
+                <Badge variant={typeColors[cat.type]}>
+                  {typeLabels[cat.type]}
+                </Badge>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -110,7 +122,7 @@ function CategoriasPage() {
                 </Button>
               </CardContent>
             </Card>
-          )
+          ),
         )}
       </div>
     </div>
@@ -124,17 +136,17 @@ function CategoryForm({
   nextOrder,
 }: {
   initial?: Category;
-  onSubmit: (data: Omit<Category, 'id'>) => void;
+  onSubmit: (data: Omit<Category, "id">) => void;
   onCancel: () => void;
   nextOrder: number;
 }) {
-  const [name, setName] = useState(initial?.name ?? '');
-  const [icon, setIcon] = useState(initial?.icon ?? '📁');
-  const [type, setType] = useState<CategoryType>(initial?.type ?? 'fixed');
+  const [name, setName] = useState(initial?.name ?? "");
+  const [icon, setIcon] = useState(initial?.icon ?? "📁");
+  const [type, setType] = useState<CategoryType>(initial?.type ?? "fixed");
   const [monthlyTarget, setMonthlyTarget] = useState(
-    initial?.monthlyTarget?.toString() ?? ''
+    initial?.monthlyTarget?.toString() ?? "",
   );
-  const [color, setColor] = useState(initial?.color ?? '#059669');
+  const [color] = useState(initial?.color ?? "#059669");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -153,14 +165,16 @@ function CategoryForm({
     <Card>
       <CardHeader>
         <CardTitle className="text-base">
-          {initial ? 'Editar Categoría' : 'Nueva Categoría'}
+          {initial ? "Editar Categoría" : "Nueva Categoría"}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-[60px_1fr] gap-2">
             <div>
-              <label className="text-xs font-medium" htmlFor="icon-input">Ícono</label>
+              <label className="text-xs font-medium" htmlFor="icon-input">
+                Ícono
+              </label>
               <Input
                 id="icon-input"
                 value={icon}
@@ -169,7 +183,9 @@ function CategoryForm({
               />
             </div>
             <div>
-              <label className="text-xs font-medium" htmlFor="name-input">Nombre</label>
+              <label className="text-xs font-medium" htmlFor="name-input">
+                Nombre
+              </label>
               <Input
                 id="name-input"
                 value={name}
@@ -180,7 +196,9 @@ function CategoryForm({
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium" htmlFor="type-select">Tipo</label>
+              <label className="text-xs font-medium" htmlFor="type-select">
+                Tipo
+              </label>
               <select
                 id="type-select"
                 value={type}
@@ -194,7 +212,9 @@ function CategoryForm({
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium" htmlFor="target-input">Meta mensual (COP)</label>
+              <label className="text-xs font-medium" htmlFor="target-input">
+                Meta mensual (COP)
+              </label>
               <Input
                 id="target-input"
                 type="number"
@@ -208,7 +228,12 @@ function CategoryForm({
             <Button type="submit" size="sm">
               <Check className="h-3.5 w-3.5" /> Guardar
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onCancel}
+            >
               <X className="h-3.5 w-3.5" /> Cancelar
             </Button>
           </div>

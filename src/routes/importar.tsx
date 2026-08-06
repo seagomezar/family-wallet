@@ -1,20 +1,24 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { useState, useCallback, useMemo } from 'react';
-import Papa from 'papaparse';
-import { db, type BankTransaction, type Category } from '@/db/schema';
-import { formatCOP, toMonthKey } from '@/lib/currency';
-import { parseDavibankPDF, detectFileType, type ParsedTransaction, type ParsedStatement } from '@/lib/pdf-parser';
+import { createFileRoute } from "@tanstack/react-router";
+import { useLiveQuery } from "dexie-react-hooks";
+import { useState, useCallback, useMemo } from "react";
+import Papa from "papaparse";
+import { db, type BankTransaction, type Category } from "@/db/schema";
+import { formatCOP, toMonthKey } from "@/lib/currency";
+import {
+  detectFileType,
+  type ParsedTransaction,
+  type ParsedStatement,
+} from "@/lib/pdf-parse-utils";
 import {
   categorizeBatch,
   createUserRule,
   suggestPattern,
   type CategorizationResult,
-} from '@/lib/categorization';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+} from "@/lib/categorization";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Upload,
   Check,
@@ -28,15 +32,15 @@ import {
   HelpCircle,
   Ban,
   Loader2,
-} from 'lucide-react';
+} from "lucide-react";
 
-export const Route = createFileRoute('/importar')({
+export const Route = createFileRoute("/importar")({
   component: ImportarPage,
 });
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-type ImportStep = 'upload' | 'review' | 'confirm';
+type ImportStep = "upload" | "review" | "confirm";
 
 interface CategorizedTransaction {
   parsed: ParsedTransaction;
@@ -49,75 +53,38 @@ interface CategorizedTransaction {
 // ─── Main Component ──────────────────────────────────────────────────
 
 function ImportarPage() {
-  const [step, setStep] = useState<ImportStep>('upload');
+  const [step, setStep] = useState<ImportStep>("upload");
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string>('');
+  const [fileName, setFileName] = useState<string>("");
   const [statement, setStatement] = useState<ParsedStatement | null>(null);
   const [categorized, setCategorized] = useState<CategorizedTransaction[]>([]);
-  const [importResult, setImportResult] = useState<{ count: number; month: string } | null>(null);
+  const [importResult, setImportResult] = useState<{
+    count: number;
+    month: string;
+  } | null>(null);
 
   // CSV fallback state
   const [csvRows, setCsvRows] = useState<CsvParsedRow[]>([]);
 
-  const categories = useLiveQuery(() => db.categories.orderBy('order').toArray());
+  const categories = useLiveQuery(() =>
+    db.categories.orderBy("order").toArray(),
+  );
 
   // ─── File handling ─────────────────────────────────────────────────
 
-  const handleFile = useCallback(async (file: File) => {
-    setError(null);
-    setFileName(file.name);
-    setIsProcessing(true);
-    setCsvRows([]);
-    setStatement(null);
-
-    const fileType = detectFileType(file);
-
-    if (fileType === 'pdf') {
-      const result = await parseDavibankPDF(file);
-      if (!result.success) {
-        setError(result.error.message + (result.error.details ? `: ${result.error.details}` : ''));
-        setIsProcessing(false);
-        return;
-      }
-
-      setStatement(result.statement);
-
-      // Auto-categorize all transactions
-      const descriptions = result.statement.transactions.map((t) => t.description);
-      const results = await categorizeBatch(descriptions);
-
-      const categorizedTxs: CategorizedTransaction[] = result.statement.transactions.map(
-        (tx, i) => ({
-          parsed: tx,
-          categorization: results[i]!,
-          remember: false,
-          skip: results[i]!.isTransfer || results[i]!.isBankFee,
-        })
-      );
-
-      setCategorized(categorizedTxs);
-      setStep('review');
-      setIsProcessing(false);
-    } else if (fileType === 'csv' || fileType === 'tsv') {
-      // Legacy CSV/TSV import
-      handleCsvFile(file);
-    } else {
-      setError('Formato no soportado. Usa archivos PDF, CSV o TSV.');
-      setIsProcessing(false);
-    }
-  }, []);
-
-  const handleCsvFile = (file: File) => {
+  const handleCsvFile = useCallback((file: File) => {
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
-      delimiter: '',
+      delimiter: "",
       complete: (results) => {
         setIsProcessing(false);
         if (results.errors.length > 0) {
-          setError(`Error al parsear: ${results.errors[0]?.message ?? 'Error desconocido'}`);
+          setError(
+            `Error al parsear: ${results.errors[0]?.message ?? "Error desconocido"}`,
+          );
           return;
         }
 
@@ -126,49 +93,114 @@ function ImportarPage() {
             const keys = Object.keys(row);
             const get = (patterns: string[]) => {
               const key = keys.find((k) =>
-                patterns.some((p) => k.toUpperCase().includes(p))
+                patterns.some((p) => k.toUpperCase().includes(p)),
               );
-              return key ? (row[key] ?? '').trim() : '';
+              return key ? (row[key] ?? "").trim() : "";
             };
 
-            const valorStr = get(['VALOR', 'MONTO', 'AMOUNT']);
-            const valor = parseFloat(valorStr.replace(/[,$\s]/g, '').replace(/\./g, ''));
+            const valorStr = get(["VALOR", "MONTO", "AMOUNT"]);
+            const valor = parseFloat(
+              valorStr.replace(/[,$\s]/g, "").replace(/\./g, ""),
+            );
 
             return {
-              fecha: get(['FECHA', 'DATE']),
-              documento: get(['DOCUMENTO', 'DOC']),
-              oficina: get(['OFICINA', 'OFFICE']),
-              descripcion: get(['DESCRIPCI', 'DESCRIPTION', 'DESC']),
-              referencia: get(['REFERENCIA', 'REF']),
+              fecha: get(["FECHA", "DATE"]),
+              documento: get(["DOCUMENTO", "DOC"]),
+              oficina: get(["OFICINA", "OFFICE"]),
+              descripcion: get(["DESCRIPCI", "DESCRIPTION", "DESC"]),
+              referencia: get(["REFERENCIA", "REF"]),
               valor: isNaN(valor) ? 0 : valor,
             };
           })
           .filter((r) => r.descripcion && r.valor !== 0);
 
         if (rows.length === 0) {
-          setError('No se encontraron transacciones válidas en el archivo.');
+          setError("No se encontraron transacciones válidas en el archivo.");
           return;
         }
 
         setCsvRows(rows);
-        setStep('review');
+        setStep("review");
       },
       error: (err) => {
         setIsProcessing(false);
         setError(`Error leyendo archivo: ${err.message}`);
       },
     });
-  };
+  }, []);
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      setError(null);
+      setFileName(file.name);
+      setIsProcessing(true);
+      setCsvRows([]);
+      setStatement(null);
+
+      const fileType = detectFileType(file);
+
+      if (fileType === "pdf") {
+        const { parseDavibankPDF } = await import("@/lib/pdf-parser");
+        const result = await parseDavibankPDF(file);
+        if (!result.success) {
+          setError(
+            result.error.message +
+              (result.error.details ? `: ${result.error.details}` : ""),
+          );
+          setIsProcessing(false);
+          return;
+        }
+
+        setStatement(result.statement);
+
+        // Auto-categorize all transactions
+        const descriptions = result.statement.transactions.map(
+          (t) => t.description,
+        );
+        const results = await categorizeBatch(descriptions);
+
+        const categorizedTxs: CategorizedTransaction[] =
+          result.statement.transactions.map((tx, i) => {
+            const cat = results[i] ?? {
+              categoryId: null,
+              confidence: "none" as const,
+              matchedRule: null,
+              isTransfer: false,
+              isBankFee: false,
+            };
+            return {
+              parsed: tx,
+              categorization: cat,
+              remember: false,
+              skip: cat.isTransfer || cat.isBankFee,
+            };
+          });
+
+        setCategorized(categorizedTxs);
+        setStep("review");
+        setIsProcessing(false);
+      } else if (fileType === "csv" || fileType === "tsv") {
+        // Legacy CSV/TSV import
+        handleCsvFile(file);
+      } else {
+        setError("Formato no soportado. Usa archivos PDF, CSV o TSV.");
+        setIsProcessing(false);
+      }
+    },
+    [handleCsvFile],
+  );
 
   // ─── Multi-file handling ───────────────────────────────────────────
 
   const handleFiles = useCallback(
     async (files: FileList) => {
-      if (files.length === 1) {
-        handleFile(files[0]!);
+      if (files.length === 1 && files[0]) {
+        handleFile(files[0]);
       } else {
         // For now, process first PDF
-        const pdfFile = Array.from(files).find((f) => detectFileType(f) === 'pdf');
+        const pdfFile = Array.from(files).find(
+          (f) => detectFileType(f) === "pdf",
+        );
         if (pdfFile) {
           handleFile(pdfFile);
         } else if (files[0]) {
@@ -176,7 +208,7 @@ function ImportarPage() {
         }
       }
     },
-    [handleFile]
+    [handleFile],
   );
 
   function handleDrop(e: React.DragEvent) {
@@ -195,9 +227,12 @@ function ImportarPage() {
 
   // ─── Review step actions ───────────────────────────────────────────
 
-  function updateTransaction(index: number, updates: Partial<CategorizedTransaction>) {
+  function updateTransaction(
+    index: number,
+    updates: Partial<CategorizedTransaction>,
+  ) {
     setCategorized((prev) =>
-      prev.map((tx, i) => (i === index ? { ...tx, ...updates } : tx))
+      prev.map((tx, i) => (i === index ? { ...tx, ...updates } : tx)),
     );
   }
 
@@ -212,7 +247,10 @@ function ImportarPage() {
       const month = statement?.period ?? toMonthKey(new Date());
 
       // Ensure budget exists for the month
-      const existingBudget = await db.budgets.where('month').equals(month).first();
+      const existingBudget = await db.budgets
+        .where("month")
+        .equals(month)
+        .first();
       let budgetId: string;
       if (!existingBudget) {
         budgetId = `budget-${month}`;
@@ -233,11 +271,12 @@ function ImportarPage() {
         importBatch: batchId,
         transactionDate: tx.parsed.date,
         description: tx.parsed.description,
-        reference: '',
+        reference: "",
         amount: tx.parsed.amount,
         office: tx.parsed.office,
-        categoryId: tx.userCategoryId ?? tx.categorization.categoryId ?? undefined,
-        status: 'accepted' as const,
+        categoryId:
+          tx.userCategoryId ?? tx.categorization.categoryId ?? undefined,
+        status: "accepted" as const,
         importedAt: new Date(),
       }));
 
@@ -252,12 +291,13 @@ function ImportarPage() {
         .map((tx, i) => ({
           id: `exp-${batchId}-${i}`,
           budgetId,
-          categoryId: (tx.userCategoryId ?? tx.categorization.categoryId)!,
+          categoryId: (tx.userCategoryId ??
+            tx.categorization.categoryId) as string,
           description: tx.parsed.description,
           amount: Math.abs(tx.parsed.amount),
           previousAmount: 0,
-          paymentSource: 'debito' as const,
-          status: 'paid' as const,
+          paymentSource: "debito" as const,
+          status: "paid" as const,
           paidDate: tx.parsed.date,
           isRecurring: false,
           createdAt: new Date(),
@@ -270,7 +310,8 @@ function ImportarPage() {
 
       // Create user rules for transactions marked with "remember"
       const toRemember = categorized.filter(
-        (tx) => tx.remember && (tx.userCategoryId ?? tx.categorization.categoryId)
+        (tx) =>
+          tx.remember && (tx.userCategoryId ?? tx.categorization.categoryId),
       );
       for (const tx of toRemember) {
         const catId = tx.userCategoryId ?? tx.categorization.categoryId;
@@ -281,9 +322,11 @@ function ImportarPage() {
       }
 
       setImportResult({ count: toImport.length, month });
-      setStep('confirm');
+      setStep("confirm");
     } catch (err) {
-      setError(`Error al importar: ${err instanceof Error ? err.message : String(err)}`);
+      setError(
+        `Error al importar: ${err instanceof Error ? err.message : String(err)}`,
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -302,23 +345,26 @@ function ImportarPage() {
       reference: row.referencia,
       amount: row.valor,
       office: row.oficina,
-      status: 'pending' as const,
+      status: "pending" as const,
       importedAt: new Date(),
     }));
 
     await db.bankTransactions.bulkAdd(transactions);
     setCsvRows([]);
-    setImportResult({ count: transactions.length, month: toMonthKey(new Date()) });
-    setStep('confirm');
+    setImportResult({
+      count: transactions.length,
+      month: toMonthKey(new Date()),
+    });
+    setStep("confirm");
     setIsProcessing(false);
   }
 
   // ─── Reset ─────────────────────────────────────────────────────────
 
   function handleReset() {
-    setStep('upload');
+    setStep("upload");
     setError(null);
-    setFileName('');
+    setFileName("");
     setStatement(null);
     setCategorized([]);
     setCsvRows([]);
@@ -331,7 +377,7 @@ function ImportarPage() {
     <div className="space-y-4 pb-20 md:pb-6 md:pl-56">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Importar Extracto Bancario</h2>
-        {step !== 'upload' && step !== 'confirm' && (
+        {step !== "upload" && step !== "confirm" && (
           <Button variant="ghost" size="sm" onClick={handleReset}>
             <X className="h-4 w-4 mr-1" /> Cancelar
           </Button>
@@ -342,12 +388,15 @@ function ImportarPage() {
       <StepIndicator current={step} />
 
       {/* Step 1: Upload */}
-      {step === 'upload' && (
+      {step === "upload" && (
         <UploadStep
           isDragging={isDragging}
           isProcessing={isProcessing}
           error={error}
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           onFileInput={handleFileInput}
@@ -355,7 +404,7 @@ function ImportarPage() {
       )}
 
       {/* Step 2: Review (PDF) */}
-      {step === 'review' && statement && categorized.length > 0 && (
+      {step === "review" && statement && categorized.length > 0 && (
         <ReviewStep
           statement={statement}
           categorized={categorized}
@@ -368,7 +417,7 @@ function ImportarPage() {
       )}
 
       {/* Step 2: Review (CSV fallback) */}
-      {step === 'review' && csvRows.length > 0 && (
+      {step === "review" && csvRows.length > 0 && (
         <CsvReviewStep
           rows={csvRows}
           fileName={fileName}
@@ -379,11 +428,11 @@ function ImportarPage() {
       )}
 
       {/* Step 3: Confirmation */}
-      {step === 'confirm' && importResult && (
+      {step === "confirm" && importResult && (
         <ConfirmStep result={importResult} onReset={handleReset} />
       )}
 
-      {error && step !== 'upload' && (
+      {error && step !== "upload" && (
         <Card className="border-destructive">
           <CardContent className="p-4 text-sm text-destructive flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -399,9 +448,9 @@ function ImportarPage() {
 
 function StepIndicator({ current }: { current: ImportStep }) {
   const steps: { key: ImportStep; label: string }[] = [
-    { key: 'upload', label: 'Subir' },
-    { key: 'review', label: 'Revisar' },
-    { key: 'confirm', label: 'Listo' },
+    { key: "upload", label: "Subir" },
+    { key: "review", label: "Revisar" },
+    { key: "confirm", label: "Listo" },
   ];
 
   return (
@@ -410,20 +459,26 @@ function StepIndicator({ current }: { current: ImportStep }) {
         <div key={s.key} className="flex items-center gap-2">
           <span
             className={cn(
-              'flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium',
+              "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
               current === s.key
-                ? 'bg-primary text-primary-foreground'
+                ? "bg-primary text-primary-foreground"
                 : steps.findIndex((x) => x.key === current) > i
-                  ? 'bg-primary/20 text-primary'
-                  : 'bg-muted text-muted-foreground'
+                  ? "bg-primary/20 text-primary"
+                  : "bg-muted text-muted-foreground",
             )}
           >
             {i + 1}
           </span>
-          <span className={cn(current === s.key ? 'font-medium' : 'text-muted-foreground')}>
+          <span
+            className={cn(
+              current === s.key ? "font-medium" : "text-muted-foreground",
+            )}
+          >
             {s.label}
           </span>
-          {i < steps.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground" />}
+          {i < steps.length - 1 && (
+            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+          )}
         </div>
       ))}
     </div>
@@ -451,8 +506,10 @@ function UploadStep({
     <>
       <Card
         className={cn(
-          'border-2 border-dashed transition-colors cursor-pointer',
-          isDragging ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/50'
+          "border-2 border-dashed transition-colors cursor-pointer",
+          isDragging
+            ? "border-primary bg-primary/5"
+            : "border-muted hover:border-primary/50",
         )}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
@@ -467,9 +524,12 @@ function UploadStep({
           ) : (
             <>
               <FileUp className="h-10 w-10 text-muted-foreground mb-3" />
-              <p className="text-sm font-medium">Arrastra tu extracto bancario aquí</p>
+              <p className="text-sm font-medium">
+                Arrastra tu extracto bancario aquí
+              </p>
               <p className="text-xs text-muted-foreground mt-1 text-center">
-                Soporta <strong>PDF de Davibank/Davivienda</strong> y CSV/TSV de Bancolombia
+                Soporta <strong>PDF de Davibank/Davivienda</strong> y CSV/TSV de
+                Bancolombia
               </p>
               <label className="mt-4 cursor-pointer">
                 <input
@@ -513,34 +573,61 @@ function ReviewStep({
   categorized: CategorizedTransaction[];
   categories: Category[];
   isProcessing: boolean;
-  onUpdateTransaction: (index: number, updates: Partial<CategorizedTransaction>) => void;
+  onUpdateTransaction: (
+    index: number,
+    updates: Partial<CategorizedTransaction>,
+  ) => void;
   onImport: () => void;
   onBack: () => void;
 }) {
-  const [filter, setFilter] = useState<'all' | 'auto' | 'needs-review' | 'transfers'>('all');
+  const [filter, setFilter] = useState<
+    "all" | "auto" | "needs-review" | "transfers"
+  >("all");
 
   const stats = useMemo(() => {
     const auto = categorized.filter(
-      (tx) => tx.categorization.categoryId && !tx.categorization.isTransfer && !tx.categorization.isBankFee
+      (tx) =>
+        tx.categorization.categoryId &&
+        !tx.categorization.isTransfer &&
+        !tx.categorization.isBankFee,
     );
     const needsReview = categorized.filter(
-      (tx) => !tx.categorization.categoryId && !tx.categorization.isTransfer && !tx.categorization.isBankFee
+      (tx) =>
+        !tx.categorization.categoryId &&
+        !tx.categorization.isTransfer &&
+        !tx.categorization.isBankFee,
     );
     const transfers = categorized.filter(
-      (tx) => tx.categorization.isTransfer || tx.categorization.isBankFee
+      (tx) => tx.categorization.isTransfer || tx.categorization.isBankFee,
     );
     const toImport = categorized.filter((tx) => !tx.skip);
 
-    return { auto: auto.length, needsReview: needsReview.length, transfers: transfers.length, toImport: toImport.length };
+    return {
+      auto: auto.length,
+      needsReview: needsReview.length,
+      transfers: transfers.length,
+      toImport: toImport.length,
+    };
   }, [categorized]);
 
   const filtered = useMemo(() => {
     return categorized
       .map((tx, index) => ({ ...tx, index }))
       .filter((tx) => {
-        if (filter === 'auto') return tx.categorization.categoryId && !tx.categorization.isTransfer && !tx.categorization.isBankFee;
-        if (filter === 'needs-review') return !tx.categorization.categoryId && !tx.categorization.isTransfer && !tx.categorization.isBankFee;
-        if (filter === 'transfers') return tx.categorization.isTransfer || tx.categorization.isBankFee;
+        if (filter === "auto")
+          return (
+            tx.categorization.categoryId &&
+            !tx.categorization.isTransfer &&
+            !tx.categorization.isBankFee
+          );
+        if (filter === "needs-review")
+          return (
+            !tx.categorization.categoryId &&
+            !tx.categorization.isTransfer &&
+            !tx.categorization.isBankFee
+          );
+        if (filter === "transfers")
+          return tx.categorization.isTransfer || tx.categorization.isBankFee;
         return true;
       });
   }, [categorized, filter]);
@@ -553,7 +640,9 @@ function ReviewStep({
           <div className="flex items-center gap-2 mb-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Extracto Davibank</span>
-            <Badge variant="outline" className="text-xs">{statement.periodLabel}</Badge>
+            <Badge variant="outline" className="text-xs">
+              {statement.periodLabel}
+            </Badge>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
             <span>Cuenta: {statement.accountNumber}</span>
@@ -565,48 +654,65 @@ function ReviewStep({
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-2">
         <button
-          onClick={() => setFilter('auto')}
+          onClick={() => setFilter("auto")}
           className={cn(
-            'rounded-lg border p-3 text-center transition-colors',
-            filter === 'auto' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+            "rounded-lg border p-3 text-center transition-colors",
+            filter === "auto"
+              ? "border-primary bg-primary/5"
+              : "hover:bg-muted/50",
           )}
         >
           <div className="flex items-center justify-center gap-1 text-positive">
             <Sparkles className="h-3 w-3" />
             <span className="text-lg font-bold">{stats.auto}</span>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Auto-categorizadas</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Auto-categorizadas
+          </p>
         </button>
         <button
-          onClick={() => setFilter('needs-review')}
+          onClick={() => setFilter("needs-review")}
           className={cn(
-            'rounded-lg border p-3 text-center transition-colors',
-            filter === 'needs-review' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+            "rounded-lg border p-3 text-center transition-colors",
+            filter === "needs-review"
+              ? "border-primary bg-primary/5"
+              : "hover:bg-muted/50",
           )}
         >
           <div className="flex items-center justify-center gap-1 text-amber-500">
             <HelpCircle className="h-3 w-3" />
             <span className="text-lg font-bold">{stats.needsReview}</span>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Por revisar</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Por revisar
+          </p>
         </button>
         <button
-          onClick={() => setFilter('transfers')}
+          onClick={() => setFilter("transfers")}
           className={cn(
-            'rounded-lg border p-3 text-center transition-colors',
-            filter === 'transfers' ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+            "rounded-lg border p-3 text-center transition-colors",
+            filter === "transfers"
+              ? "border-primary bg-primary/5"
+              : "hover:bg-muted/50",
           )}
         >
           <div className="flex items-center justify-center gap-1 text-muted-foreground">
             <Ban className="h-3 w-3" />
             <span className="text-lg font-bold">{stats.transfers}</span>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Transferencias</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Transferencias
+          </p>
         </button>
       </div>
 
-      {filter !== 'all' && (
-        <Button variant="ghost" size="sm" className="text-xs" onClick={() => setFilter('all')}>
+      {filter !== "all" && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs"
+          onClick={() => setFilter("all")}
+        >
           ← Ver todas
         </Button>
       )}
@@ -658,46 +764,62 @@ function TransactionCard({
   const isBankFee = tx.categorization.isBankFee;
   const isSkipped = tx.skip;
   const effectiveCategoryId = tx.userCategoryId ?? tx.categorization.categoryId;
-  const category = categories.find((c) => c.id === effectiveCategoryId);
 
   return (
     <div
       className={cn(
-        'rounded-lg border p-3 space-y-2 transition-opacity',
-        isSkipped && 'opacity-50',
-        isTransfer && 'border-dashed bg-muted/30',
-        isBankFee && 'border-dashed bg-muted/30'
+        "rounded-lg border p-3 space-y-2 transition-opacity",
+        isSkipped && "opacity-50",
+        isTransfer && "border-dashed bg-muted/30",
+        isBankFee && "border-dashed bg-muted/30",
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className={cn('text-sm font-medium truncate', isTransfer && 'italic text-muted-foreground')}>
+          <p
+            className={cn(
+              "text-sm font-medium truncate",
+              isTransfer && "italic text-muted-foreground",
+            )}
+          >
             {tx.parsed.description}
           </p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[10px] text-muted-foreground">
-              {tx.parsed.date.toLocaleDateString('es-CO')}
+              {tx.parsed.date.toLocaleDateString("es-CO")}
             </span>
             {isTransfer && (
-              <Badge variant="outline" className="text-[10px] px-1 py-0">Transferencia</Badge>
-            )}
-            {isBankFee && (
-              <Badge variant="outline" className="text-[10px] px-1 py-0">Cargo bancario</Badge>
-            )}
-            {!isTransfer && !isBankFee && tx.categorization.confidence !== 'none' && (
-              <Badge
-                variant={tx.categorization.confidence === 'high' ? 'success' : 'warning'}
-                className="text-[10px] px-1 py-0"
-              >
-                {tx.categorization.confidence === 'high' ? '✓ Auto' : '~ Sugerida'}
+              <Badge variant="outline" className="text-[10px] px-1 py-0">
+                Transferencia
               </Badge>
             )}
+            {isBankFee && (
+              <Badge variant="outline" className="text-[10px] px-1 py-0">
+                Cargo bancario
+              </Badge>
+            )}
+            {!isTransfer &&
+              !isBankFee &&
+              tx.categorization.confidence !== "none" && (
+                <Badge
+                  variant={
+                    tx.categorization.confidence === "high"
+                      ? "success"
+                      : "warning"
+                  }
+                  className="text-[10px] px-1 py-0"
+                >
+                  {tx.categorization.confidence === "high"
+                    ? "✓ Auto"
+                    : "~ Sugerida"}
+                </Badge>
+              )}
           </div>
         </div>
         <span
           className={cn(
-            'text-sm font-semibold tabular-nums shrink-0',
-            tx.parsed.amount < 0 ? 'text-negative' : 'text-positive'
+            "text-sm font-semibold tabular-nums shrink-0",
+            tx.parsed.amount < 0 ? "text-negative" : "text-positive",
           )}
         >
           {formatCOP(tx.parsed.amount)}
@@ -707,8 +829,10 @@ function TransactionCard({
       {/* Category selection + skip control */}
       <div className="flex items-center gap-2">
         <select
-          value={effectiveCategoryId ?? ''}
-          onChange={(e) => onUpdate({ userCategoryId: e.target.value || undefined })}
+          value={effectiveCategoryId ?? ""}
+          onChange={(e) =>
+            onUpdate({ userCategoryId: e.target.value || undefined })
+          }
           className="flex-1 h-7 rounded border border-input bg-background px-2 text-xs"
           disabled={isSkipped}
         >
@@ -721,28 +845,32 @@ function TransactionCard({
         </select>
 
         {/* Remember checkbox (only for manually categorized) */}
-        {(tx.userCategoryId || (!isTransfer && !isBankFee && tx.categorization.confidence === 'none')) && effectiveCategoryId && (
-          <label className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer">
-            <input
-              type="checkbox"
-              checked={tx.remember}
-              onChange={(e) => onUpdate({ remember: e.target.checked })}
-              className="h-3 w-3 rounded border-input"
-            />
-            Recordar
-          </label>
-        )}
+        {(tx.userCategoryId ||
+          (!isTransfer &&
+            !isBankFee &&
+            tx.categorization.confidence === "none")) &&
+          effectiveCategoryId && (
+            <label className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap cursor-pointer">
+              <input
+                type="checkbox"
+                checked={tx.remember}
+                onChange={(e) => onUpdate({ remember: e.target.checked })}
+                className="h-3 w-3 rounded border-input"
+              />
+              Recordar
+            </label>
+          )}
 
         {/* Skip toggle */}
         <button
           onClick={() => onUpdate({ skip: !isSkipped })}
           className={cn(
-            'h-7 w-7 flex items-center justify-center rounded border transition-colors shrink-0',
+            "h-7 w-7 flex items-center justify-center rounded border transition-colors shrink-0",
             isSkipped
-              ? 'bg-muted border-muted-foreground/30 text-muted-foreground'
-              : 'border-input hover:bg-muted text-muted-foreground'
+              ? "bg-muted border-muted-foreground/30 text-muted-foreground"
+              : "border-input hover:bg-muted text-muted-foreground",
           )}
-          title={isSkipped ? 'Incluir en importación' : 'Omitir'}
+          title={isSkipped ? "Incluir en importación" : "Omitir"}
         >
           {isSkipped ? <X className="h-3 w-3" /> : <Ban className="h-3 w-3" />}
         </button>
@@ -786,8 +914,8 @@ function CsvReviewStep({
                 </div>
                 <span
                   className={cn(
-                    'font-semibold tabular-nums',
-                    row.valor < 0 ? 'text-negative' : 'text-positive'
+                    "font-semibold tabular-nums",
+                    row.valor < 0 ? "text-negative" : "text-positive",
                   )}
                 >
                   {formatCOP(row.valor)}
@@ -838,7 +966,7 @@ function ConfirmStep({
         <div>
           <p className="font-medium">¡Importación completada!</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Se importaron <strong>{result.count}</strong> transacciones al mes{' '}
+            Se importaron <strong>{result.count}</strong> transacciones al mes{" "}
             <strong>{result.month}</strong>
           </p>
         </div>
@@ -863,10 +991,10 @@ interface CsvParsedRow {
 
 function parseDateStr(dateStr: string): Date {
   if (/^\d{4}[/-]\d{2}[/-]\d{2}$/.test(dateStr)) {
-    return new Date(dateStr.replace(/\//g, '-'));
+    return new Date(dateStr.replace(/\//g, "-"));
   }
   if (/^\d{1,2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-    const [d, m, y] = dateStr.split('/');
+    const [d, m, y] = dateStr.split("/");
     return new Date(`${y}-${m}-${d}`);
   }
   return new Date(dateStr);

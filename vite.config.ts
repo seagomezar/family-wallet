@@ -46,6 +46,19 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('pdfjs-dist')) return 'pdf-worker';
+          if (id.includes('node_modules/react-dom')) return 'vendor-react';
+          if (id.includes('node_modules/react/')) return 'vendor-react';
+          if (id.includes('@tanstack/react-router')) return 'vendor-router';
+          if (id.includes('dexie')) return 'vendor-db';
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': import.meta.dirname + '/src',

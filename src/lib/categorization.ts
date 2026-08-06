@@ -5,11 +5,11 @@
  * User rules take priority over built-in rules.
  */
 
-import { db, type CategorizationRule } from '@/db/schema';
+import { db, type CategorizationRule } from "@/db/schema";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
-export type MatchConfidence = 'high' | 'medium' | 'low' | 'none';
+export type MatchConfidence = "high" | "medium" | "low" | "none";
 
 export interface CategorizationResult {
   categoryId: string | null;
@@ -23,7 +23,7 @@ export interface BuiltinRule {
   id: string;
   patterns: string[];
   categoryId: string;
-  source: 'builtin';
+  source: "builtin";
   confidence: MatchConfidence;
   label?: string; // human-readable label for UI
 }
@@ -37,230 +37,247 @@ export interface BuiltinRule {
 export const BUILTIN_RULES: BuiltinRule[] = [
   // ── Credits / Mortgage ─────────────────────────────
   {
-    id: 'builtin-vivienda',
-    patterns: ['PAGO VIVIENDA', 'Pago VIVIENDA', 'PRESTAMOS', 'Pago Int-5041'],
-    categoryId: 'cat-creditos',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Crédito vivienda/préstamos',
+    id: "builtin-vivienda",
+    patterns: ["PAGO VIVIENDA", "Pago VIVIENDA", "PRESTAMOS", "Pago Int-5041"],
+    categoryId: "cat-creditos",
+    source: "builtin",
+    confidence: "high",
+    label: "Crédito vivienda/préstamos",
   },
 
   // ── Débitos automáticos ────────────────────────────
   {
-    id: 'builtin-debito-ach',
-    patterns: ['DEBITO - RECAUDO ACH'],
-    categoryId: 'cat-debitos',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Débito automático ACH',
+    id: "builtin-debito-ach",
+    patterns: ["DEBITO - RECAUDO ACH"],
+    categoryId: "cat-debitos",
+    source: "builtin",
+    confidence: "high",
+    label: "Débito automático ACH",
   },
   {
-    id: 'builtin-pago-tc',
-    patterns: ['PAGO TC Credencial', 'PAGO BANCO DE OCCIDENTE'],
-    categoryId: 'cat-debitos',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Pago tarjeta de crédito',
+    id: "builtin-pago-tc",
+    patterns: ["PAGO TC Credencial", "PAGO BANCO DE OCCIDENTE"],
+    categoryId: "cat-debitos",
+    source: "builtin",
+    confidence: "high",
+    label: "Pago tarjeta de crédito",
   },
 
   // ── Servicios ──────────────────────────────────────
   {
-    id: 'builtin-epm',
-    patterns: ['EPM FACTURA', 'EPM factura'],
-    categoryId: 'cat-servicios',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'EPM factura',
+    id: "builtin-epm",
+    patterns: ["EPM FACTURA", "EPM factura"],
+    categoryId: "cat-servicios",
+    source: "builtin",
+    confidence: "high",
+    label: "EPM factura",
   },
   {
-    id: 'builtin-movistar',
-    patterns: ['facturas Movist', 'Pago multiples facturas'],
-    categoryId: 'cat-servicios',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Servicios Movistar',
+    id: "builtin-movistar",
+    patterns: ["facturas Movist", "Pago multiples facturas"],
+    categoryId: "cat-servicios",
+    source: "builtin",
+    confidence: "high",
+    label: "Servicios Movistar",
   },
 
   // ── Internet Sopetrán ──────────────────────────────
   {
-    id: 'builtin-internet-sopetran',
-    patterns: ['SOMOS INTERNET'],
-    categoryId: 'cat-internet-sopetran',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Internet Sopetrán',
+    id: "builtin-internet-sopetran",
+    patterns: ["SOMOS INTERNET"],
+    categoryId: "cat-internet-sopetran",
+    source: "builtin",
+    confidence: "high",
+    label: "Internet Sopetrán",
   },
 
   // ── Tanqueadas ─────────────────────────────────────
   {
-    id: 'builtin-tanqueadas',
-    patterns: ['TEXACO', 'TERPEL', 'MOBIL EDS', 'EDS ', 'PRIMAX', 'GASOLINA'],
-    categoryId: 'cat-tanqueadas',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Estaciones de gasolina',
+    id: "builtin-tanqueadas",
+    patterns: ["TEXACO", "TERPEL", "MOBIL EDS", "EDS ", "PRIMAX", "GASOLINA"],
+    categoryId: "cat-tanqueadas",
+    source: "builtin",
+    confidence: "high",
+    label: "Estaciones de gasolina",
   },
 
   // ── Mercado / Supermercado ─────────────────────────
   {
-    id: 'builtin-mercado',
-    patterns: ['EXITO', 'ÉXITO', 'SUPERMERCADO', 'PRICESMART', 'CARULLA', 'JUMBO', 'D1 ', 'EURO', 'OLIMPICA'],
-    categoryId: 'cat-para-gastar',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Supermercados/mercado',
+    id: "builtin-mercado",
+    patterns: [
+      "EXITO",
+      "ÉXITO",
+      "SUPERMERCADO",
+      "PRICESMART",
+      "CARULLA",
+      "JUMBO",
+      "D1 ",
+      "EURO",
+      "OLIMPICA",
+    ],
+    categoryId: "cat-para-gastar",
+    source: "builtin",
+    confidence: "high",
+    label: "Supermercados/mercado",
   },
 
   // ── Ocio / Restaurantes ────────────────────────────
   {
-    id: 'builtin-restaurantes',
+    id: "builtin-restaurantes",
     patterns: [
-      'CINEMAS', 'PROCINAL', 'CREPESYWAF', 'CREPES Y WAFFL',
-      'FRISBY', 'ALDEA NIKKEI', 'TOSTAO', 'HOME FOOD',
-      'BIGOS', 'TIENDA DE CAFE',
+      "CINEMAS",
+      "PROCINAL",
+      "CREPESYWAF",
+      "CREPES Y WAFFL",
+      "FRISBY",
+      "ALDEA NIKKEI",
+      "TOSTAO",
+      "HOME FOOD",
+      "BIGOS",
+      "TIENDA DE CAFE",
     ],
-    categoryId: 'cat-para-gastar',
-    source: 'builtin',
-    confidence: 'medium',
-    label: 'Restaurantes/ocio',
+    categoryId: "cat-para-gastar",
+    source: "builtin",
+    confidence: "medium",
+    label: "Restaurantes/ocio",
   },
 
   // ── CDT ────────────────────────────────────────────
   {
-    id: 'builtin-cdt',
-    patterns: ['CDT DIGITAL'],
-    categoryId: 'cat-cdt',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'CDT Digital',
+    id: "builtin-cdt",
+    patterns: ["CDT DIGITAL"],
+    categoryId: "cat-cdt",
+    source: "builtin",
+    confidence: "high",
+    label: "CDT Digital",
   },
 
   // ── Gym ────────────────────────────────────────────
   {
-    id: 'builtin-gym',
-    patterns: ['ACTION BLACK'],
-    categoryId: 'cat-para-gastar',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Gimnasio Action Black',
+    id: "builtin-gym",
+    patterns: ["ACTION BLACK"],
+    categoryId: "cat-para-gastar",
+    source: "builtin",
+    confidence: "high",
+    label: "Gimnasio Action Black",
   },
 
   // ── Administraciones ───────────────────────────────
   {
-    id: 'builtin-admin',
-    patterns: ['CONJ', 'ADMINISTRACION', 'ADMON', 'PagodelaFactura'],
-    categoryId: 'cat-administraciones',
-    source: 'builtin',
-    confidence: 'medium',
-    label: 'Administración',
+    id: "builtin-admin",
+    patterns: ["CONJ", "ADMINISTRACION", "ADMON", "PagodelaFactura"],
+    categoryId: "cat-administraciones",
+    source: "builtin",
+    confidence: "medium",
+    label: "Administración",
   },
 
   // ── Celulares ──────────────────────────────────────
   {
-    id: 'builtin-celulares',
-    patterns: ['CLARO', 'TIGO'],
-    categoryId: 'cat-celulares',
-    source: 'builtin',
-    confidence: 'medium',
-    label: 'Plan celular',
+    id: "builtin-celulares",
+    patterns: ["CLARO", "TIGO"],
+    categoryId: "cat-celulares",
+    source: "builtin",
+    confidence: "medium",
+    label: "Plan celular",
   },
 
   // ── Universidad ────────────────────────────────────
   {
-    id: 'builtin-universidad',
-    patterns: ['UNIVERSIDAD EA', 'EAFIT'],
-    categoryId: 'cat-universidad',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Universidad EAFIT',
+    id: "builtin-universidad",
+    patterns: ["UNIVERSIDAD EA", "EAFIT"],
+    categoryId: "cat-universidad",
+    source: "builtin",
+    confidence: "high",
+    label: "Universidad EAFIT",
   },
 
   // ── Apple (suscripción, débito) ────────────────────
   {
-    id: 'builtin-apple',
-    patterns: ['APPLE.COM/BILL', 'APPLE._'],
-    categoryId: 'cat-debitos',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Apple subscriptions',
+    id: "builtin-apple",
+    patterns: ["APPLE.COM/BILL", "APPLE._"],
+    categoryId: "cat-debitos",
+    source: "builtin",
+    confidence: "high",
+    label: "Apple subscriptions",
   },
 
   // ── DollarCity / libreria (para gastar) ────────────
   {
-    id: 'builtin-dollarcity',
-    patterns: ['DOLLARCITY', 'LIBRERIA NACIO'],
-    categoryId: 'cat-para-gastar',
-    source: 'builtin',
-    confidence: 'medium',
-    label: 'Compras varias',
+    id: "builtin-dollarcity",
+    patterns: ["DOLLARCITY", "LIBRERIA NACIO"],
+    categoryId: "cat-para-gastar",
+    source: "builtin",
+    confidence: "medium",
+    label: "Compras varias",
   },
 
   // ── NU deposit / PSE factura (débitos) ─────────────
   {
-    id: 'builtin-nu',
-    patterns: ['DepOsito a tu cuenta NU'],
-    categoryId: 'cat-debitos',
-    source: 'builtin',
-    confidence: 'medium',
-    label: 'Depósito NU',
+    id: "builtin-nu",
+    patterns: ["DepOsito a tu cuenta NU"],
+    categoryId: "cat-debitos",
+    source: "builtin",
+    confidence: "medium",
+    label: "Depósito NU",
   },
 
   // ── Pago factura genérico (servicios) ──────────────
   {
-    id: 'builtin-factura',
-    patterns: ['Pago de factura'],
-    categoryId: 'cat-servicios',
-    source: 'builtin',
-    confidence: 'low',
-    label: 'Pago de factura (genérico)',
+    id: "builtin-factura",
+    patterns: ["Pago de factura"],
+    categoryId: "cat-servicios",
+    source: "builtin",
+    confidence: "low",
+    label: "Pago de factura (genérico)",
   },
 
   // ── Salud ──────────────────────────────────────────
   {
-    id: 'builtin-salud',
-    patterns: ['CEDIMED', 'CLINICA', 'SUPLIMED', 'CElulasMadre'],
-    categoryId: 'cat-para-gastar',
-    source: 'builtin',
-    confidence: 'medium',
-    label: 'Salud/médico',
+    id: "builtin-salud",
+    patterns: ["CEDIMED", "CLINICA", "SUPLIMED", "CElulasMadre"],
+    categoryId: "cat-para-gastar",
+    source: "builtin",
+    confidence: "medium",
+    label: "Salud/médico",
   },
 
   // ── Impuestos (predial) ────────────────────────────
   {
-    id: 'builtin-predial',
-    patterns: ['Impuestopredial', 'predial'],
-    categoryId: 'cat-servicios',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Impuesto predial',
+    id: "builtin-predial",
+    patterns: ["Impuestopredial", "predial"],
+    categoryId: "cat-servicios",
+    source: "builtin",
+    confidence: "high",
+    label: "Impuesto predial",
   },
 
   // ── Sol Creciente (créditos) ───────────────────────
   {
-    id: 'builtin-sol-creciente',
-    patterns: ['SolCreciente', 'PagoSolCreciente'],
-    categoryId: 'cat-creditos',
-    source: 'builtin',
-    confidence: 'high',
-    label: 'Sol Creciente (préstamo)',
+    id: "builtin-sol-creciente",
+    patterns: ["SolCreciente", "PagoSolCreciente"],
+    categoryId: "cat-creditos",
+    source: "builtin",
+    confidence: "high",
+    label: "Sol Creciente (préstamo)",
   },
 ];
 
 // ─── Transfer Detection ──────────────────────────────────────────────
 
 const TRANSFER_PATTERNS = [
-  'Traslados entre cuentas',
-  'Traslados Producto-Cta',
-  'Rec.Inter TFR',
-  'Trans. ACH TFR',
-  'TARJETAS DE CREDITO',
+  "Traslados entre cuentas",
+  "Traslados Producto-Cta",
+  "Rec.Inter TFR",
+  "Trans. ACH TFR",
+  "TARJETAS DE CREDITO",
 ];
 
 const BANK_FEE_PATTERNS = [
-  'PAGO DE INTERESES',
-  'RETENCION EN LA FUENTE',
-  'IMP/TRANS FINANC',
-  'COMIS_COMP',
+  "PAGO DE INTERESES",
+  "RETENCION EN LA FUENTE",
+  "IMP/TRANS FINANC",
+  "COMIS_COMP",
 ];
 
 // ─── Engine ──────────────────────────────────────────────────────────
@@ -279,11 +296,13 @@ export function isBankFee(description: string): boolean {
  * Categorize a transaction description using built-in rules.
  * Returns the best match with confidence.
  */
-export function categorizeWithBuiltins(description: string): CategorizationResult {
+export function categorizeWithBuiltins(
+  description: string,
+): CategorizationResult {
   if (isInternalTransfer(description)) {
     return {
       categoryId: null,
-      confidence: 'high',
+      confidence: "high",
       matchedRule: null,
       isTransfer: true,
       isBankFee: false,
@@ -293,7 +312,7 @@ export function categorizeWithBuiltins(description: string): CategorizationResul
   if (isBankFee(description)) {
     return {
       categoryId: null,
-      confidence: 'high',
+      confidence: "high",
       matchedRule: null,
       isTransfer: false,
       isBankFee: true,
@@ -318,7 +337,7 @@ export function categorizeWithBuiltins(description: string): CategorizationResul
 
   return {
     categoryId: null,
-    confidence: 'none',
+    confidence: "none",
     matchedRule: null,
     isTransfer: false,
     isBankFee: false,
@@ -329,36 +348,39 @@ export function categorizeWithBuiltins(description: string): CategorizationResul
  * Categorize using user rules first, then fall back to built-in rules.
  * User rules always take priority.
  */
-export async function categorize(description: string): Promise<CategorizationResult> {
+export async function categorize(
+  description: string,
+): Promise<CategorizationResult> {
   // Check user rules first (they have priority)
   const userRules = await db.categorizationRules
-    .where('source')
-    .equals('user')
+    .where("source")
+    .equals("user")
     .toArray();
 
   const upper = description.toUpperCase();
 
   for (const rule of userRules) {
     const pattern = rule.pattern.toUpperCase();
-    let matches = false;
-
-    if (rule.isRegex) {
-      try {
-        const regex = new RegExp(rule.pattern, 'i');
-        matches = regex.test(description);
-      } catch {
-        matches = upper.includes(pattern);
-      }
-    } else {
-      matches = upper.includes(pattern);
-    }
+    const matches = rule.isRegex
+      ? (() => {
+          try {
+            return new RegExp(rule.pattern, "i").test(description);
+          } catch {
+            return upper.includes(pattern);
+          }
+        })()
+      : upper.includes(pattern);
 
     if (matches) {
       // Increment match count
-      await db.categorizationRules.update(rule.id!, { matchCount: rule.matchCount + 1 });
+      if (rule.id) {
+        await db.categorizationRules.update(rule.id, {
+          matchCount: rule.matchCount + 1,
+        });
+      }
       return {
         categoryId: rule.categoryId,
-        confidence: 'high',
+        confidence: "high",
         matchedRule: rule,
         isTransfer: false,
         isBankFee: false,
@@ -375,11 +397,11 @@ export async function categorize(description: string): Promise<CategorizationRes
  * Loads user rules once for efficiency.
  */
 export async function categorizeBatch(
-  descriptions: string[]
+  descriptions: string[],
 ): Promise<CategorizationResult[]> {
   const userRules = await db.categorizationRules
-    .where('source')
-    .equals('user')
+    .where("source")
+    .equals("user")
     .toArray();
 
   return descriptions.map((desc) => {
@@ -388,23 +410,20 @@ export async function categorizeBatch(
     // User rules first
     for (const rule of userRules) {
       const pattern = rule.pattern.toUpperCase();
-      let matches = false;
-
-      if (rule.isRegex) {
-        try {
-          const regex = new RegExp(rule.pattern, 'i');
-          matches = regex.test(desc);
-        } catch {
-          matches = upper.includes(pattern);
-        }
-      } else {
-        matches = upper.includes(pattern);
-      }
+      const matches = rule.isRegex
+        ? (() => {
+            try {
+              return new RegExp(rule.pattern, "i").test(desc);
+            } catch {
+              return upper.includes(pattern);
+            }
+          })()
+        : upper.includes(pattern);
 
       if (matches) {
         return {
           categoryId: rule.categoryId,
-          confidence: 'high' as MatchConfidence,
+          confidence: "high" as MatchConfidence,
           matchedRule: rule,
           isTransfer: false,
           isBankFee: false,
@@ -423,13 +442,13 @@ export async function categorizeBatch(
 export async function createUserRule(
   pattern: string,
   categoryId: string,
-  isRegex = false
+  isRegex = false,
 ): Promise<CategorizationRule> {
   const rule: CategorizationRule = {
     id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     pattern,
     categoryId,
-    source: 'user',
+    source: "user",
     isRegex,
     matchCount: 0,
     createdAt: new Date(),
@@ -460,12 +479,12 @@ export async function deleteUserRule(ruleId: string): Promise<void> {
 export function suggestPattern(description: string): string {
   // Remove common noise words and codes
   let pattern = description
-    .replace(/\d{6}\s+\d{6}/g, '') // terminal codes
-    .replace(/\b\d{6,}\b/g, '') // long numbers
-    .replace(/COMPRA POS\s+/i, '') // remove "COMPRA POS" prefix
-    .replace(/Pago por PSE\s*/i, '') // remove PSE prefix
-    .replace(/RETIRO ATM\s+\w+\s+/i, '') // remove ATM prefix
-    .replace(/\s+/g, ' ')
+    .replace(/\d{6}\s+\d{6}/g, "") // terminal codes
+    .replace(/\b\d{6,}\b/g, "") // long numbers
+    .replace(/COMPRA POS\s+/i, "") // remove "COMPRA POS" prefix
+    .replace(/Pago por PSE\s*/i, "") // remove PSE prefix
+    .replace(/RETIRO ATM\s+\w+\s+/i, "") // remove ATM prefix
+    .replace(/\s+/g, " ")
     .trim();
 
   // Take first meaningful part (up to 30 chars)

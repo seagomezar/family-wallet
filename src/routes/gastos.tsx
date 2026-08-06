@@ -1,47 +1,46 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
-import { db, type Expense, type ExpenseStatus } from '@/db/schema';
-import { useUIStore } from '@/stores/ui';
-import { formatCOP, formatDelta } from '@/lib/currency';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { Plus, Trash2, Check, X } from 'lucide-react';
+import { createFileRoute } from "@tanstack/react-router";
+import { useLiveQuery } from "dexie-react-hooks";
+import { useState } from "react";
+import { db, type Expense, type ExpenseStatus } from "@/db/schema";
+import { useUIStore } from "@/stores/ui";
+import { formatCOP, formatDelta } from "@/lib/currency";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Plus, Trash2, Check, X } from "lucide-react";
 
-export const Route = createFileRoute('/gastos')({
+export const Route = createFileRoute("/gastos")({
   component: GastosPage,
 });
 
-type FilterTab = 'all' | 'pending' | 'paid';
+type FilterTab = "all" | "pending" | "paid";
 
 function GastosPage() {
   const selectedMonth = useUIStore((s) => s.selectedMonth);
-  const [filter, setFilter] = useState<FilterTab>('all');
+  const [filter, setFilter] = useState<FilterTab>("all");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
+  const [editValue, setEditValue] = useState("");
 
   const budget = useLiveQuery(
-    () => db.budgets.where('month').equals(selectedMonth).first(),
-    [selectedMonth]
+    () => db.budgets.where("month").equals(selectedMonth).first(),
+    [selectedMonth],
   );
 
-  const expenses = useLiveQuery(
-    () => {
-      if (!budget) return [];
-      return db.expenses.where('budgetId').equals(budget.id).toArray();
-    },
-    [budget]
-  );
+  const expenses = useLiveQuery(() => {
+    if (!budget) return [];
+    return db.expenses.where("budgetId").equals(budget.id).toArray();
+  }, [budget]);
 
-  const categories = useLiveQuery(() => db.categories.orderBy('order').toArray());
+  const categories = useLiveQuery(() =>
+    db.categories.orderBy("order").toArray(),
+  );
 
   const filteredExpenses = (expenses ?? []).filter((e) => {
-    if (filter === 'pending') return e.status === 'pending';
-    if (filter === 'paid') return e.status === 'paid';
+    if (filter === "pending") return e.status === "pending";
+    if (filter === "paid") return e.status === "paid";
     return true;
   });
 
@@ -80,8 +79,8 @@ function GastosPage() {
       description: data.description,
       amount: data.amount,
       previousAmount: 0,
-      paymentSource: 'bancolombia',
-      status: 'pending',
+      paymentSource: "bancolombia",
+      status: "pending",
       isRecurring: false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -94,10 +93,11 @@ function GastosPage() {
   }
 
   async function handleToggleStatus(expense: Expense) {
-    const newStatus: ExpenseStatus = expense.status === 'paid' ? 'pending' : 'paid';
+    const newStatus: ExpenseStatus =
+      expense.status === "paid" ? "pending" : "paid";
     await db.expenses.update(expense.id, {
       status: newStatus,
-      paidDate: newStatus === 'paid' ? new Date() : undefined,
+      paidDate: newStatus === "paid" ? new Date() : undefined,
       updatedAt: new Date(),
     });
   }
@@ -121,14 +121,18 @@ function GastosPage() {
     <div className="space-y-4 pb-20 md:pb-6 md:pl-56">
       {/* Filter tabs */}
       <div className="flex gap-2">
-        {(['all', 'pending', 'paid'] as const).map((tab) => (
+        {(["all", "pending", "paid"] as const).map((tab) => (
           <Button
             key={tab}
-            variant={filter === tab ? 'default' : 'outline'}
+            variant={filter === tab ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter(tab)}
           >
-            {tab === 'all' ? 'Todos' : tab === 'pending' ? 'Pendientes' : 'Pagados'}
+            {tab === "all"
+              ? "Todos"
+              : tab === "pending"
+                ? "Pendientes"
+                : "Pagados"}
           </Button>
         ))}
         <div className="ml-auto text-sm text-muted-foreground self-center">
@@ -168,35 +172,43 @@ function GastosPage() {
                   <button
                     onClick={() => handleToggleStatus(expense)}
                     className={cn(
-                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
-                      expense.status === 'paid'
-                        ? 'border-positive bg-positive text-white'
-                        : expense.status === 'overdue'
-                          ? 'border-negative'
-                          : 'border-muted-foreground'
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                      expense.status === "paid"
+                        ? "border-positive bg-positive text-white"
+                        : expense.status === "overdue"
+                          ? "border-negative"
+                          : "border-muted-foreground",
                     )}
-                    aria-label={expense.status === 'paid' ? 'Marcar pendiente' : 'Marcar pagado'}
+                    aria-label={
+                      expense.status === "paid"
+                        ? "Marcar pendiente"
+                        : "Marcar pagado"
+                    }
                   >
-                    {expense.status === 'paid' && <Check className="h-3 w-3" />}
+                    {expense.status === "paid" && <Check className="h-3 w-3" />}
                   </button>
 
                   {/* Description */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{expense.description}</p>
+                    <p className="text-sm font-medium truncate">
+                      {expense.description}
+                    </p>
                     {expense.previousAmount > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        ant: {formatCOP(expense.previousAmount)}{' '}
+                        ant: {formatCOP(expense.previousAmount)}{" "}
                         <span
                           className={cn(
-                            'font-medium',
+                            "font-medium",
                             expense.amount - expense.previousAmount > 0
-                              ? 'text-negative'
+                              ? "text-negative"
                               : expense.amount - expense.previousAmount < 0
-                                ? 'text-positive'
-                                : ''
+                                ? "text-positive"
+                                : "",
                           )}
                         >
-                          ({formatDelta(expense.amount - expense.previousAmount)})
+                          (
+                          {formatDelta(expense.amount - expense.previousAmount)}
+                          )
                         </span>
                       </p>
                     )}
@@ -211,15 +223,25 @@ function GastosPage() {
                         onChange={(e) => setEditValue(e.target.value)}
                         className="h-7 w-28 text-right text-sm"
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveEdit(expense.id);
-                          if (e.key === 'Escape') setEditingId(null);
+                          if (e.key === "Enter") handleSaveEdit(expense.id);
+                          if (e.key === "Escape") setEditingId(null);
                         }}
                         autoFocus
                       />
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleSaveEdit(expense.id)}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => handleSaveEdit(expense.id)}
+                      >
                         <Check className="h-3 w-3" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingId(null)}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7"
+                        onClick={() => setEditingId(null)}
+                      >
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
@@ -235,15 +257,19 @@ function GastosPage() {
                   {/* Status badge */}
                   <Badge
                     variant={
-                      expense.status === 'paid'
-                        ? 'success'
-                        : expense.status === 'overdue'
-                          ? 'destructive'
-                          : 'warning'
+                      expense.status === "paid"
+                        ? "success"
+                        : expense.status === "overdue"
+                          ? "destructive"
+                          : "warning"
                     }
                     className="hidden sm:inline-flex"
                   >
-                    {expense.status === 'paid' ? 'Pagado' : expense.status === 'overdue' ? 'Vencido' : 'Pendiente'}
+                    {expense.status === "paid"
+                      ? "Pagado"
+                      : expense.status === "overdue"
+                        ? "Vencido"
+                        : "Pendiente"}
                   </Badge>
 
                   {/* Delete */}
@@ -285,18 +311,32 @@ function AddExpenseForm({
   onCancel,
 }: {
   categories: { id: string; name: string; icon: string }[];
-  onSubmit: (data: { categoryId: string; description: string; amount: number }) => void;
+  onSubmit: (data: {
+    categoryId: string;
+    description: string;
+    amount: number;
+  }) => void;
   onCancel: () => void;
 }) {
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '');
-  const [description, setDescription] = useState('');
-  const [amount, setAmount] = useState('');
+  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const numAmount = parseInt(amount, 10);
-    if (!categoryId || !description.trim() || isNaN(numAmount) || numAmount <= 0) return;
-    onSubmit({ categoryId, description: description.trim(), amount: numAmount });
+    if (
+      !categoryId ||
+      !description.trim() ||
+      isNaN(numAmount) ||
+      numAmount <= 0
+    )
+      return;
+    onSubmit({
+      categoryId,
+      description: description.trim(),
+      amount: numAmount,
+    });
   }
 
   return (
@@ -307,7 +347,9 @@ function AddExpenseForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="text-sm font-medium" htmlFor="cat-select">Categoría</label>
+            <label className="text-sm font-medium" htmlFor="cat-select">
+              Categoría
+            </label>
             <select
               id="cat-select"
               value={categoryId}
@@ -322,7 +364,9 @@ function AddExpenseForm({
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium" htmlFor="desc-input">Descripción</label>
+            <label className="text-sm font-medium" htmlFor="desc-input">
+              Descripción
+            </label>
             <Input
               id="desc-input"
               value={description}
@@ -331,7 +375,9 @@ function AddExpenseForm({
             />
           </div>
           <div>
-            <label className="text-sm font-medium" htmlFor="amount-input">Monto (COP)</label>
+            <label className="text-sm font-medium" htmlFor="amount-input">
+              Monto (COP)
+            </label>
             <Input
               id="amount-input"
               type="number"

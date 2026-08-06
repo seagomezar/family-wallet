@@ -1,18 +1,26 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
-import { db } from '@/db/schema';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Download, Upload, Database, Trash2 } from 'lucide-react';
+import { createFileRoute } from "@tanstack/react-router";
+import { useLiveQuery } from "dexie-react-hooks";
+import { useState } from "react";
+import { db } from "@/db/schema";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Download, Upload, Database, Trash2 } from "lucide-react";
 
-export const Route = createFileRoute('/ajustes')({
+export const Route = createFileRoute("/ajustes")({
   component: AjustesPage,
 });
 
 function AjustesPage() {
-  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [importMessage, setImportMessage] = useState('');
+  const [importStatus, setImportStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [importMessage, setImportMessage] = useState("");
 
   const budgetCount = useLiveQuery(() => db.budgets.count());
   const categoryCount = useLiveQuery(() => db.categories.count());
@@ -30,9 +38,11 @@ function AjustesPage() {
       savingsGoals: await db.savingsGoals.toArray(),
     };
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `billetera-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
@@ -55,44 +65,86 @@ function AjustesPage() {
       };
 
       if (!data.version) {
-        throw new Error('Archivo no válido: falta versión.');
+        throw new Error("Archivo no válido: falta versión.");
       }
 
       // Clear existing data and import
-      await db.transaction('rw', db.budgets, db.categories, db.expenses, db.bankTransactions, db.savingsGoals, async () => {
+      await db.transaction(
+        "rw",
+        db.budgets,
+        db.categories,
+        db.expenses,
+        db.bankTransactions,
+        db.savingsGoals,
+        async () => {
+          await db.budgets.clear();
+          await db.categories.clear();
+          await db.expenses.clear();
+          await db.bankTransactions.clear();
+          await db.savingsGoals.clear();
+
+          if (data.budgets)
+            await db.budgets.bulkAdd(
+              data.budgets as Parameters<typeof db.budgets.bulkAdd>[0],
+            );
+          if (data.categories)
+            await db.categories.bulkAdd(
+              data.categories as Parameters<typeof db.categories.bulkAdd>[0],
+            );
+          if (data.expenses)
+            await db.expenses.bulkAdd(
+              data.expenses as Parameters<typeof db.expenses.bulkAdd>[0],
+            );
+          if (data.bankTransactions)
+            await db.bankTransactions.bulkAdd(
+              data.bankTransactions as Parameters<
+                typeof db.bankTransactions.bulkAdd
+              >[0],
+            );
+          if (data.savingsGoals)
+            await db.savingsGoals.bulkAdd(
+              data.savingsGoals as Parameters<
+                typeof db.savingsGoals.bulkAdd
+              >[0],
+            );
+        },
+      );
+
+      setImportStatus("success");
+      setImportMessage("Respaldo restaurado exitosamente.");
+    } catch (err) {
+      setImportStatus("error");
+      setImportMessage(
+        err instanceof Error ? err.message : "Error desconocido",
+      );
+    }
+
+    // Reset input
+    e.target.value = "";
+  }
+
+  async function handleClearData() {
+    if (
+      !confirm(
+        "¿Estás seguro? Esto eliminará TODOS los datos. Exporta un respaldo primero.",
+      )
+    )
+      return;
+    await db.transaction(
+      "rw",
+      db.budgets,
+      db.categories,
+      db.expenses,
+      db.bankTransactions,
+      db.savingsGoals,
+      async () => {
         await db.budgets.clear();
         await db.categories.clear();
         await db.expenses.clear();
         await db.bankTransactions.clear();
         await db.savingsGoals.clear();
-
-        if (data.budgets) await db.budgets.bulkAdd(data.budgets as Parameters<typeof db.budgets.bulkAdd>[0]);
-        if (data.categories) await db.categories.bulkAdd(data.categories as Parameters<typeof db.categories.bulkAdd>[0]);
-        if (data.expenses) await db.expenses.bulkAdd(data.expenses as Parameters<typeof db.expenses.bulkAdd>[0]);
-        if (data.bankTransactions) await db.bankTransactions.bulkAdd(data.bankTransactions as Parameters<typeof db.bankTransactions.bulkAdd>[0]);
-        if (data.savingsGoals) await db.savingsGoals.bulkAdd(data.savingsGoals as Parameters<typeof db.savingsGoals.bulkAdd>[0]);
-      });
-
-      setImportStatus('success');
-      setImportMessage('Respaldo restaurado exitosamente.');
-    } catch (err) {
-      setImportStatus('error');
-      setImportMessage(err instanceof Error ? err.message : 'Error desconocido');
-    }
-
-    // Reset input
-    e.target.value = '';
-  }
-
-  async function handleClearData() {
-    if (!confirm('¿Estás seguro? Esto eliminará TODOS los datos. Exporta un respaldo primero.')) return;
-    await db.transaction('rw', db.budgets, db.categories, db.expenses, db.bankTransactions, db.savingsGoals, async () => {
-      await db.budgets.clear();
-      await db.categories.clear();
-      await db.expenses.clear();
-      await db.bankTransactions.clear();
-      await db.savingsGoals.clear();
-    });
+      },
+    );
   }
 
   return (
@@ -132,7 +184,9 @@ function AjustesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Exportar Respaldo</CardTitle>
-          <CardDescription>Descarga todos tus datos como archivo JSON.</CardDescription>
+          <CardDescription>
+            Descarga todos tus datos como archivo JSON.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={handleExport}>
@@ -146,20 +200,28 @@ function AjustesPage() {
         <CardHeader>
           <CardTitle className="text-base">Restaurar Respaldo</CardTitle>
           <CardDescription>
-            Importa un archivo JSON previamente exportado. ⚠️ Esto reemplaza todos los datos actuales.
+            Importa un archivo JSON previamente exportado. ⚠️ Esto reemplaza
+            todos los datos actuales.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <label className="cursor-pointer">
-            <input type="file" accept=".json" className="hidden" onChange={handleImport} />
+            <input
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleImport}
+            />
             <span className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent transition-colors">
               <Upload className="h-4 w-4" /> Seleccionar archivo JSON
             </span>
           </label>
-          {importStatus !== 'idle' && (
+          {importStatus !== "idle" && (
             <p
               className={
-                importStatus === 'success' ? 'text-sm text-positive' : 'text-sm text-destructive'
+                importStatus === "success"
+                  ? "text-sm text-positive"
+                  : "text-sm text-destructive"
               }
             >
               {importMessage}
@@ -171,7 +233,9 @@ function AjustesPage() {
       {/* Danger zone */}
       <Card className="border-destructive/50">
         <CardHeader>
-          <CardTitle className="text-base text-destructive">Zona de Peligro</CardTitle>
+          <CardTitle className="text-base text-destructive">
+            Zona de Peligro
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Button variant="destructive" onClick={handleClearData}>

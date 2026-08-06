@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { currentMonthKey } from '@/lib/currency';
+import { create } from "zustand";
+import { currentMonthKey } from "@/lib/currency";
 
 interface UIState {
   selectedMonth: string;
