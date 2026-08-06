@@ -33,8 +33,9 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - PDF import uses `pdfjs-dist` with CDN worker (`src/lib/pdf-parser.ts`)
 - Pure parsing utils separated from pdfjs dependency for testability (`src/lib/pdf-parse-utils.ts`)
 - Auto-categorization engine with built-in rules + user learning rules (`src/lib/categorization.ts`)
-- DB schema is at version 3 (added `settings` table for app settings like `hasSeenTour`)
+- DB schema is at version 4 (v3 added `settings` table; v4 added `isRecurring` index on expenses)
 - Bank: Davibank/Davivienda savings account, Colombian format (period thousands, comma decimals)
+- Recurring expenses logic in `src/lib/recurring.ts` (copyExpensesFromPreviousMonth, autoPopulateRecurring)
 - E2E tests in `tests/e2e/` with fixtures in `tests/fixtures/`; config at `playwright.config.ts`
 - E2E tests clear IndexedDB per-test for isolation; nav helper targets desktop sidebar (`nav.hidden.md:block`)
 
