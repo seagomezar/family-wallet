@@ -1,4 +1,4 @@
-# La Billetera de Sebastián
+# Family Wallet
 
 A local-first family finance SPA for tracking monthly budgets, expenses, and bank transactions.
 

@@ -26,7 +26,7 @@ test.describe('Data Export/Import', () => {
     const download = await downloadPromise;
 
     // Verify download
-    expect(download.suggestedFilename()).toMatch(/billetera-backup-.*\.json/);
+    expect(download.suggestedFilename()).toMatch(/family-wallet-backup-.*\.json/);
   });
 
   test('import JSON restores all data', async ({ page }) => {

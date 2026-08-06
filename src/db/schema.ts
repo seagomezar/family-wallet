@@ -83,7 +83,10 @@ export interface AppSetting {
 
 // ─── Database ────────────────────────────────────────────────────────
 
-export class BilleteraDB extends Dexie {
+// NOTE: DB name kept as "FamilyWalletDB" (renamed from "BilleteraDB").
+// Existing users on the old name will need to export their data from
+// the previous version and re-import after this update.
+export class FamilyWalletDB extends Dexie {
   budgets!: EntityTable<Budget, 'id'>;
   categories!: EntityTable<Category, 'id'>;
   expenses!: EntityTable<Expense, 'id'>;
@@ -93,7 +96,7 @@ export class BilleteraDB extends Dexie {
   settings!: EntityTable<AppSetting, 'key'>;
 
   constructor() {
-    super("BilleteraDB");
+    super("FamilyWalletDB");
     this.version(1).stores({
       budgets: "id, month",
       categories: "id, name, order, type",
@@ -130,4 +133,4 @@ export class BilleteraDB extends Dexie {
   }
 }
 
-export const db = new BilleteraDB();
+export const db = new FamilyWalletDB();

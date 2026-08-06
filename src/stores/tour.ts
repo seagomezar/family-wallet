@@ -13,7 +13,7 @@ export interface TourStep {
 export const TOUR_STEPS: TourStep[] = [
   {
     id: 'welcome',
-    title: 'Bienvenido a La Billetera de Sebastián 💰',
+    title: 'Bienvenido a Family Wallet 💰',
     description:
       'Tu app de finanzas familiares. Controla ingresos, gastos y presupuesto mes a mes — todo en tu dispositivo, sin internet.',
     targetSelector: null,

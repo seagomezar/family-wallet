@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { db, BilleteraDB } from '@/db/schema';
+import { db, FamilyWalletDB } from '@/db/schema';
 import { seedCategories } from '@/db/seed';
 
 describe('Database Schema & Operations - Extended', () => {
@@ -13,8 +13,8 @@ describe('Database Schema & Operations - Extended', () => {
   });
 
   describe('Schema validation', () => {
-    it('db is an instance of BilleteraDB', () => {
-      expect(db).toBeInstanceOf(BilleteraDB);
+    it('db is an instance of FamilyWalletDB', () => {
+      expect(db).toBeInstanceOf(FamilyWalletDB);
     });
 
     it('has all expected tables', () => {
