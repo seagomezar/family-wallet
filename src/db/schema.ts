@@ -71,6 +71,16 @@ export interface SavingsGoal {
   color: string;
 }
 
+export interface CategorizationRule {
+  id: string;
+  pattern: string; // substring or regex to match
+  categoryId: string; // target category
+  source: 'builtin' | 'user';
+  isRegex: boolean;
+  matchCount: number; // how many times it matched
+  createdAt: Date;
+}
+
 // ─── Database ────────────────────────────────────────────────────────
 
 export class BilleteraDB extends Dexie {
@@ -79,6 +89,7 @@ export class BilleteraDB extends Dexie {
   expenses!: EntityTable<Expense, 'id'>;
   bankTransactions!: EntityTable<BankTransaction, 'id'>;
   savingsGoals!: EntityTable<SavingsGoal, 'id'>;
+  categorizationRules!: EntityTable<CategorizationRule, 'id'>;
 
   constructor() {
     super('BilleteraDB');
@@ -88,6 +99,14 @@ export class BilleteraDB extends Dexie {
       expenses: 'id, budgetId, categoryId, status, [budgetId+categoryId]',
       bankTransactions: 'id, importBatch, transactionDate, categoryId, status',
       savingsGoals: 'id, name',
+    });
+    this.version(2).stores({
+      budgets: 'id, month',
+      categories: 'id, name, order, type',
+      expenses: 'id, budgetId, categoryId, status, [budgetId+categoryId]',
+      bankTransactions: 'id, importBatch, transactionDate, categoryId, status',
+      savingsGoals: 'id, name',
+      categorizationRules: 'id, pattern, categoryId, source, matchCount',
     });
   }
 }

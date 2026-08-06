@@ -28,6 +28,11 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - "LIBRE" (free money = income − expenses) is the hero metric
 - Month key format: `"YYYY-MM"` (e.g. `"2026-06"`)
 - Spanish UI throughout — no i18n layer needed
+- PDF import uses `pdfjs-dist` with CDN worker (`src/lib/pdf-parser.ts`)
+- Pure parsing utils separated from pdfjs dependency for testability (`src/lib/pdf-parse-utils.ts`)
+- Auto-categorization engine with built-in rules + user learning rules (`src/lib/categorization.ts`)
+- DB schema is at version 2 (added `categorizationRules` table)
+- Bank: Davibank/Davivienda savings account, Colombian format (period thousands, comma decimals)
 
 ## Maintaining this file
 
