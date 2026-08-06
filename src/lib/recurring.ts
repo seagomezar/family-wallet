@@ -1,3 +1,24 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════╗
+ * ║  ARCHITECTURE DECISION — UPFRONT RECURRING EXPENSE CREATION        ║
+ * ╠══════════════════════════════════════════════════════════════════════╣
+ * ║  Recurring expenses are created UPFRONT: when a user marks an      ║
+ * ║  expense as recurring, `createRecurringCopies()` immediately       ║
+ * ║  writes copies for every month up to the current calendar month.   ║
+ * ║                                                                    ║
+ * ║  ⚠️  DO NOT use navigation-based triggers (useEffect, route hooks,  ║
+ * ║  selectedMonth watchers, "create-on-visit" patterns) to create     ║
+ * ║  recurring data. This was attempted 4 times and failed due to:     ║
+ * ║    • Race conditions (async DB vs React rendering)                 ║
+ * ║    • In-memory dedup Sets blocking legitimate retries              ║
+ * ║    • Year-boundary / month-gap edge cases                          ║
+ * ║    • Implicit dependency on page-visit order                       ║
+ * ║                                                                    ║
+ * ║  See AGENTS.md "Architecture Decision: Recurring Expenses" for     ║
+ * ║  full rationale.                                                   ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
+ */
+
 import { db, type Expense } from "@/db/schema";
 import { currentMonthKey, nextMonthKey, previousMonthKey } from "@/lib/currency";
 

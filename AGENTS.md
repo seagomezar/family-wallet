@@ -35,10 +35,27 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - Auto-categorization engine with built-in rules + user learning rules (`src/lib/categorization.ts`)
 - DB schema is at version 4 (v3 added `settings` table; v4 added `isRecurring` index on expenses)
 - Bank: Davibank/Davivienda savings account, Colombian format (period thousands, comma decimals)
-- Recurring expenses use **upfront creation**: when an expense is marked recurring, `createRecurringCopies()` in `src/lib/recurring.ts` immediately creates copies in every month from source+1 to current calendar month. No navigation hooks or triggers involved.
+- Recurring expenses: see **Architecture Decision: Recurring Expenses** section below for full rationale and anti-patterns
 - `copyExpensesFromPreviousMonth` (manual "Copiar mes anterior" button) is a separate feature that copies ALL expenses
 - E2E tests in `tests/e2e/` with fixtures in `tests/fixtures/`; config at `playwright.config.ts`
 - E2E tests clear IndexedDB per-test for isolation; nav helper targets desktop sidebar (`nav.hidden.md:block`)
+
+## Architecture Decision: Recurring Expenses (ADR)
+
+**Decision**: Recurring expenses use **upfront creation** — all future copies are written to IndexedDB immediately when the user marks an expense as recurring.
+
+**DO NOT** use navigation-based triggers (`useEffect`, route-change hooks, `selectedMonth` watchers, or any "create-on-visit" pattern) to materialise recurring data. This approach was attempted 4 times and failed every time due to:
+
+1. **Race conditions** between async Dexie queries and React rendering / `useLiveQuery` reactivity
+2. **In-memory deduplication Sets** blocking legitimate retries after partial failures
+3. **Year-boundary and month-gap edge cases** in cascade logic (e.g. December → January)
+4. **Implicit dependency** on the user visiting specific pages in a specific order
+
+**The correct pattern**: `createRecurringCopies()` in `src/lib/recurring.ts` is called at expense-creation time and when toggling the `isRecurring` flag ON. It writes copies for every month from `sourceMonth + 1` through the current calendar month in a single pass. Reading a month simply queries what is already in the database — no lazy materialisation.
+
+**Key files**:
+- `src/lib/recurring.ts` — `createRecurringCopies()` (upfront creation), `copyExpensesFromPreviousMonth()` (separate manual copy-all button)
+- `src/routes/gastos.tsx` — calls `createRecurringCopies` on expense creation and recurring toggle
 
 ## Maintaining this file
 
