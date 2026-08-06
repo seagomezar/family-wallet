@@ -321,8 +321,8 @@ describe("Recurring Expenses – Cascade Forward", () => {
     expect(result.populated).toBe(2);
   });
 
-  it("cascade is capped at 12 months forward", async () => {
-    // Source 11 months before target (within 12-month search)
+  it("cascades across many months without artificial cap", async () => {
+    // Source 11 months before target (within 24-month search)
     await createBudget("2025-09");
     await createExpense({
       budgetId: "budget-2025-09",
@@ -338,6 +338,48 @@ describe("Recurring Expenses – Cascade Forward", () => {
     expect(result.reason).toBe("populated");
     expect(result.monthsFilled).toBe(11);
     expect(result.populated).toBe(11);
+  });
+
+  it("captain scenario: October 2025 recurring → jump to March 2026", async () => {
+    // Create recurring expenses in October 2025
+    await createBudget("2025-10");
+    await createExpense({
+      budgetId: "budget-2025-10",
+      description: "Admin Edificio",
+      amount: 500000,
+      isRecurring: true,
+    });
+    await createExpense({
+      budgetId: "budget-2025-10",
+      description: "Internet Hogar",
+      amount: 120000,
+      isRecurring: true,
+    });
+
+    // Jump directly to March 2026 (5 months gap)
+    const result = await autoPopulateRecurring("2026-03");
+
+    // Should cascade: Nov, Dec, Jan, Feb, Mar = 5 months × 2 expenses = 10
+    expect(result.reason).toBe("populated");
+    expect(result.monthsFilled).toBe(5);
+    expect(result.populated).toBe(10);
+
+    // Verify target month
+    const marchExpenses = await getMonthExpenses("2026-03");
+    expect(marchExpenses).toHaveLength(2);
+    const descriptions = marchExpenses.map((e) => e.description).sort();
+    expect(descriptions).toEqual(["Admin Edificio", "Internet Hogar"]);
+
+    // Verify all intermediate months were filled
+    for (const month of ["2025-11", "2025-12", "2026-01", "2026-02"]) {
+      const expenses = await getMonthExpenses(month);
+      expect(expenses).toHaveLength(2);
+    }
+
+    // Second call is idempotent
+    const result2 = await autoPopulateRecurring("2026-03");
+    expect(result2.reason).toBe("already_has_expenses");
+    expect(result2.populated).toBe(0);
   });
 
   it("source search skips months with only non-recurring data and finds recurring further back", async () => {

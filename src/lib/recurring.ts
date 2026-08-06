@@ -116,9 +116,9 @@ async function getRecurringExpenses(month: string): Promise<Expense[]> {
  * so that previousAmount references remain consistent.
  *
  * Cascade logic:
- * 1. If target month already has expenses → skip
- * 2. Search up to 12 months back to find the nearest month with recurring data
- * 3. Build a list of months from source+1 to target
+ * 1. If target month already has expenses → skip (idempotent)
+ * 2. Search up to 24 months back to find the nearest month with recurring data
+ * 3. Build a list of months from source+1 to target (no artificial cap)
  * 4. For each month in the list (capped at current calendar month):
  *    - If it already has expenses, use its recurring data as the new "source" for subsequent months
  *    - If empty, copy recurring from the current source, then treat it as the new source
@@ -132,12 +132,12 @@ export async function autoPopulateRecurring(
     return { populated: 0, monthsFilled: 0, reason: "already_has_expenses" };
   }
 
-  // 2. Find the most recent month with recurring data (up to 12 months back)
+  // 2. Find the most recent month with recurring data (search up to 24 months back)
   let searchMonth = previousMonthKey(targetMonth);
   let sourceMonth: string | null = null;
   let sourceRecurring: Expense[] = [];
   let foundMonthWithData = false;
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 24; i++) {
     const budget = await db.budgets
       .where("month")
       .equals(searchMonth)
@@ -174,15 +174,18 @@ export async function autoPopulateRecurring(
   }
 
   // 3. Build list of months from source+1 to target (inclusive)
+  //    No artificial cap — bounded naturally by source→target distance
   const monthsToFill: string[] = [];
   const now = currentMonthKey();
   let m = nextMonthKey(sourceMonth);
-  for (let i = 0; i < 12; i++) {
+  while (true) {
     monthsToFill.push(m);
     if (m === targetMonth) break;
-    // Don't fill months beyond the current calendar month
+    // Safety: don't fill months beyond the current calendar month
     if (m > now) break;
     m = nextMonthKey(m);
+    // Hard safety cap at 36 months to prevent infinite loops from bad data
+    if (monthsToFill.length >= 36) break;
   }
 
   // 4. Cascade forward through each month
