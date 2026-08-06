@@ -12,6 +12,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - **UI**: Tailwind CSS 4 + hand-rolled shadcn-style components in `src/components/ui/`
 - **State**: Zustand for UI-only state (`src/stores/`); Dexie is the source of truth for data
 - **PWA**: `vite-plugin-pwa` with Workbox precaching — fully offline
+- **Deployment**: GitHub Pages via Actions (`.github/workflows/deploy.yml`); Vite `base: '/la-billetera-de-sebastian/'` + TanStack Router `basepath` in `src/main.tsx`; `404.html` copy trick for SPA routing
 - **Currency**: All amounts in COP (Colombian Pesos), formatting via `src/lib/currency.ts`
 - **Bank import**: Papa Parse with Bancolombia TSV adapter + rule-based auto-categorization
 - **Guided tour**: Custom spotlight overlay (`src/components/tour-overlay.tsx`) + Zustand store (`src/stores/tour.ts`); auto-starts on first visit, re-triggerable from Ajustes

@@ -6,7 +6,10 @@ import { seedCategories } from "./db/seed";
 import "./globals.css";
 
 // Create router instance
-const router = createRouter({ routeTree });
+const router = createRouter({
+  routeTree,
+  basepath: '/la-billetera-de-sebastian',
+});
 
 // Register the router for type safety
 declare module "@tanstack/react-router" {
