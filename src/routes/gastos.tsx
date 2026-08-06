@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Plus, Trash2, Check, X, Copy } from "lucide-react";
+import { CategoryChangeDropdown } from "@/components/category-change-dropdown";
 import {
   copyExpensesFromPreviousMonth,
   autoPopulateRecurring,
@@ -29,6 +30,7 @@ function GastosPage() {
   const [editValue, setEditValue] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [copyWarning, setCopyWarning] = useState(false);
+  const [categoryToast, setCategoryToast] = useState<string | null>(null);
   const autoPopulatedRef = useRef<string | null>(null);
 
   const budget = useLiveQuery(
@@ -165,9 +167,9 @@ function GastosPage() {
   return (
     <div className="space-y-4 pb-20 md:pb-6 md:pl-56" data-tour="expenses">
       {/* Toast notification */}
-      {toast && (
+      {(toast || categoryToast) && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-card border border-border rounded-lg shadow-lg px-4 py-3 text-sm font-medium animate-in fade-in slide-in-from-top-2">
-          {toast}
+          {toast || categoryToast}
         </div>
       )}
 
@@ -359,6 +361,17 @@ function GastosPage() {
                         ? "Vencido"
                         : "Pendiente"}
                   </Badge>
+
+                  {/* Change category */}
+                  <CategoryChangeDropdown
+                    expenseId={expense.id}
+                    currentCategoryId={expense.categoryId}
+                    categories={categories ?? []}
+                    onChanged={(name) => {
+                      setCategoryToast(`Gasto movido a ${name}`);
+                      setTimeout(() => setCategoryToast(null), 3000);
+                    }}
+                  />
 
                   {/* Delete */}
                   <Button

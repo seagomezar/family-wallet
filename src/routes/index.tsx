@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { ChevronRight, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CategoryChangeDropdown } from "@/components/category-change-dropdown";
+import type { Category } from "@/db/schema";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const selectedMonth = useUIStore((s) => s.selectedMonth);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [categoryToast, setCategoryToast] = useState<string | null>(null);
 
   function toggleCategory(id: string) {
     setExpandedIds((prev) => {
@@ -75,6 +78,13 @@ function Dashboard() {
 
   return (
     <div className="space-y-6 pb-20 md:pb-6 md:pl-56">
+      {/* Category change toast */}
+      {categoryToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-card border border-border rounded-lg shadow-lg px-4 py-3 text-sm font-medium animate-in fade-in slide-in-from-top-2">
+          {categoryToast}
+        </div>
+      )}
+
       {/* LIBRE Hero */}
       <Card className="overflow-hidden" data-tour="libre">
         <CardContent className="p-6">
@@ -192,7 +202,12 @@ function Dashboard() {
                   id={`cat-expenses-${cat.id}`}
                   isExpanded={isExpanded}
                   expenses={catExpenses}
+                  categories={categories ?? []}
                   onToggleStatus={handleToggleStatus}
+                  onCategoryChanged={(name) => {
+                    setCategoryToast(`Gasto movido a ${name}`);
+                    setTimeout(() => setCategoryToast(null), 3000);
+                  }}
                 />
               </div>
               );
@@ -209,12 +224,16 @@ function CollapsibleExpenses({
   id,
   isExpanded,
   expenses,
+  categories,
   onToggleStatus,
+  onCategoryChanged,
 }: {
   id: string;
   isExpanded: boolean;
   expenses: Expense[];
+  categories: Category[];
   onToggleStatus: (expense: Expense) => void;
+  onCategoryChanged?: (newCategoryName: string) => void;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | undefined>(undefined);
@@ -280,6 +299,15 @@ function CollapsibleExpenses({
                 <span className="tabular-nums font-medium shrink-0">
                   {formatCOP(expense.amount)}
                 </span>
+
+                {/* Change category */}
+                <CategoryChangeDropdown
+                  expenseId={expense.id}
+                  currentCategoryId={expense.categoryId}
+                  categories={categories}
+                  compact
+                  onChanged={onCategoryChanged}
+                />
 
                 {/* Status badge */}
                 <Badge
