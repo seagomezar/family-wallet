@@ -5,3 +5,8 @@ dist/
 .DS_Store
 src/routeTree.gen.ts
 tsconfig.tsbuildinfo
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
