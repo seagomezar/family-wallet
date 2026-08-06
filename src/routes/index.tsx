@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db } from "@/db/schema";
+import { useState, useRef, useEffect } from "react";
+import { db, type Expense, type ExpenseStatus } from "@/db/schema";
 import { useUIStore } from "@/stores/ui";
 import { formatCOP, percentUsed } from "@/lib/currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { ChevronRight, Check } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -13,6 +16,29 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
   const selectedMonth = useUIStore((s) => s.selectedMonth);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  function toggleCategory(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  async function handleToggleStatus(expense: Expense) {
+    const newStatus: ExpenseStatus =
+      expense.status === "paid" ? "pending" : "paid";
+    await db.expenses.update(expense.id, {
+      status: newStatus,
+      paidDate: newStatus === "paid" ? new Date() : undefined,
+      updatedAt: new Date(),
+    });
+  }
 
   const budget = useLiveQuery(
     () => db.budgets.where("month").equals(selectedMonth).first(),
@@ -125,31 +151,158 @@ function Dashboard() {
                     ? 'text-warning'
                     : 'text-positive'
                 : 'text-foreground';
+              const isExpanded = expandedIds.has(cat.id);
+              const catExpenses = (expenses ?? []).filter(
+                (e) => e.categoryId === cat.id,
+              );
               return (
               <div key={cat.id} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(cat.id)}
+                  className="flex w-full items-center justify-between text-sm rounded-md p-2 -m-2 hover:bg-muted/50 transition-colors cursor-pointer min-h-[44px]"
+                  aria-expanded={isExpanded}
+                  aria-controls={`cat-expenses-${cat.id}`}
+                >
                   <span className="flex items-center gap-2">
                     <span>{cat.icon}</span>
                     <span className="font-medium">{cat.name}</span>
                   </span>
-                  <span className={cn("tabular-nums", colorClass)}>
-                    <span className="font-semibold">{formatCOP(cat.spent)}</span>
-                    {cat.monthlyTarget > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {" "}/{" "}{formatCOP(cat.monthlyTarget)}
-                      </span>
-                    )}
+                  <span className="flex items-center gap-2">
+                    <span className={cn("tabular-nums", colorClass)}>
+                      <span className="font-semibold">{formatCOP(cat.spent)}</span>
+                      {cat.monthlyTarget > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {" "}/{" "}{formatCOP(cat.monthlyTarget)}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronRight
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                        isExpanded && "rotate-90",
+                      )}
+                    />
                   </span>
-                </div>
+                </button>
                 {cat.monthlyTarget > 0 && (
                   <Progress value={cat.percentage} />
                 )}
+                <CollapsibleExpenses
+                  id={`cat-expenses-${cat.id}`}
+                  isExpanded={isExpanded}
+                  expenses={catExpenses}
+                  onToggleStatus={handleToggleStatus}
+                />
               </div>
               );
             })
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/** Animated collapsible panel showing expenses within a category */
+function CollapsibleExpenses({
+  id,
+  isExpanded,
+  expenses,
+  onToggleStatus,
+}: {
+  id: string;
+  isExpanded: boolean;
+  expenses: Expense[];
+  onToggleStatus: (expense: Expense) => void;
+}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!contentRef.current) return;
+    if (isExpanded) {
+      setHeight(contentRef.current.scrollHeight);
+    } else {
+      setHeight(0);
+    }
+  }, [isExpanded, expenses.length]);
+
+  return (
+    <div
+      id={id}
+      role="region"
+      className="overflow-hidden transition-[height] duration-200 ease-in-out"
+      style={{ height: height !== undefined ? `${height}px` : isExpanded ? 'auto' : '0px' }}
+      aria-hidden={!isExpanded}
+    >
+      <div ref={contentRef} className="pt-2 pb-1 pl-4 border-l-2 border-muted ml-2">
+        {expenses.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic py-2">
+            Sin gastos este mes
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {expenses.map((expense) => (
+              <div
+                key={expense.id}
+                className="flex items-center gap-2 text-sm min-h-[36px]"
+              >
+                {/* Status toggle circle */}
+                <button
+                  onClick={() => onToggleStatus(expense)}
+                  className={cn(
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                    expense.status === "paid"
+                      ? "border-positive bg-positive text-white"
+                      : expense.status === "overdue"
+                        ? "border-negative"
+                        : "border-muted-foreground",
+                  )}
+                  aria-label={
+                    expense.status === "paid"
+                      ? "Marcar pendiente"
+                      : "Marcar pagado"
+                  }
+                >
+                  {expense.status === "paid" && <Check className="h-2.5 w-2.5" />}
+                </button>
+
+                {/* Description */}
+                <span className="flex-1 truncate text-foreground/80">
+                  {expense.isRecurring && (
+                    <span className="mr-1" title="Gasto recurrente">🔁</span>
+                  )}
+                  {expense.description}
+                </span>
+
+                {/* Amount */}
+                <span className="tabular-nums font-medium shrink-0">
+                  {formatCOP(expense.amount)}
+                </span>
+
+                {/* Status badge */}
+                <Badge
+                  variant={
+                    expense.status === "paid"
+                      ? "success"
+                      : expense.status === "overdue"
+                        ? "destructive"
+                        : "warning"
+                  }
+                  className="text-[10px] px-1.5 py-0"
+                >
+                  {expense.status === "paid"
+                    ? "Pagado"
+                    : expense.status === "overdue"
+                      ? "Vencido"
+                      : "Pendiente"}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
