@@ -27,7 +27,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 
 ## Key patterns
 
-- 18 pre-seeded budget categories from family Excel (see `src/db/seed.ts`)
+- 3 generic example budget categories (see `src/db/seed.ts`), budget $0 — user fills in their own
 - "LIBRE" (free money = income − expenses) is the hero metric
 - Month key format: `"YYYY-MM"` (e.g. `"2026-06"`)
 - Spanish UI throughout — no i18n layer needed
