@@ -13,26 +13,26 @@ describe('Dexie Database', () => {
   });
 
   describe('seedCategories', () => {
-    it('seeds 18 categories on empty database', async () => {
+    it('seeds 3 example categories on empty database', async () => {
       await seedCategories();
       const count = await db.categories.count();
-      expect(count).toBe(18);
+      expect(count).toBe(3);
     });
 
     it('does not duplicate on second call', async () => {
       await seedCategories();
       await seedCategories();
       const count = await db.categories.count();
-      expect(count).toBe(18);
+      expect(count).toBe(3);
     });
 
     it('includes expected categories', async () => {
       await seedCategories();
       const cats = await db.categories.toArray();
       const names = cats.map((c) => c.name);
-      expect(names).toContain('Créditos casa-40mm-tc');
-      expect(names).toContain('Ahorro Alejandro');
-      expect(names).toContain('Para gastar');
+      expect(names).toContain('Vivienda');
+      expect(names).toContain('Mercado');
+      expect(names).toContain('Transporte');
     });
   });
 
@@ -60,8 +60,8 @@ describe('Dexie Database', () => {
         {
           id: 'exp-1',
           budgetId,
-          categoryId: 'cat-creditos',
-          description: 'Crédito Casa',
+          categoryId: 'cat-vivienda',
+          description: 'Arriendo',
           amount: 5153000,
           previousAmount: 5153000,
           paymentSource: 'bancolombia',
@@ -73,8 +73,8 @@ describe('Dexie Database', () => {
         {
           id: 'exp-2',
           budgetId,
-          categoryId: 'cat-administraciones',
-          description: 'Admon Laureles',
+          categoryId: 'cat-mercado',
+          description: 'Mercado semanal',
           amount: 620000,
           previousAmount: 502900,
           paymentSource: 'bancolombia',
@@ -96,7 +96,7 @@ describe('Dexie Database', () => {
         {
           id: 'exp-a',
           budgetId: 'b1',
-          categoryId: 'cat-creditos',
+          categoryId: 'cat-vivienda',
           description: 'Test',
           amount: 9100000,
           previousAmount: 0,
@@ -109,7 +109,7 @@ describe('Dexie Database', () => {
         {
           id: 'exp-b',
           budgetId: 'b1',
-          categoryId: 'cat-para-gastar',
+          categoryId: 'cat-mercado',
           description: 'Test 2',
           amount: 9485446,
           previousAmount: 0,
@@ -139,7 +139,7 @@ describe('Dexie Database', () => {
           reference: 'REF123',
           amount: -327900,
           office: '001',
-          categoryId: 'cat-para-gastar',
+          categoryId: 'cat-mercado',
           status: 'pending',
           importedAt: new Date(),
         },
@@ -151,7 +151,7 @@ describe('Dexie Database', () => {
           reference: 'REF456',
           amount: -40000,
           office: '001',
-          categoryId: 'cat-debitos',
+          categoryId: 'cat-mercado',
           status: 'accepted',
           importedAt: new Date(),
         },

@@ -65,13 +65,13 @@ describe('CSV Import (Papa Parse)', () => {
     function suggestCategory(description: string): string | undefined {
       const desc = description.toUpperCase();
       const rules: [string[], string][] = [
-        [['NETFLIX', 'SPOTIFY', 'SMARTFIT', 'CHATGPT'], 'cat-debitos'],
-        [['UBER', 'TANQUE', 'GASOLINA', 'EDS ', 'PRIMAX', 'TERPEL'], 'cat-tanqueadas'],
-        [['EXITO', 'JUMBO', 'CARULLA', 'D1 ', 'EURO', 'OLIMPICA', 'MERCADO'], 'cat-para-gastar'],
-        [['PEAJE'], 'cat-peaje-sopetran'],
-        [['ADMINISTRACION', 'ADMON'], 'cat-administraciones'],
-        [['EPM', 'ENERGIA', 'ACUEDUCTO', 'GAS NATURAL', 'UNE'], 'cat-servicios'],
-        [['CLARO', 'TIGO', 'MOVISTAR'], 'cat-celulares'],
+        [['NETFLIX', 'SPOTIFY', 'SMARTFIT', 'CHATGPT'], 'cat-mercado'],
+        [['UBER', 'TANQUE', 'GASOLINA', 'EDS ', 'PRIMAX', 'TERPEL'], 'cat-transporte'],
+        [['EXITO', 'JUMBO', 'CARULLA', 'D1 ', 'EURO', 'OLIMPICA', 'MERCADO'], 'cat-mercado'],
+        [['PEAJE'], 'cat-transporte'],
+        [['ADMINISTRACION', 'ADMON'], 'cat-vivienda'],
+        [['EPM', 'ENERGIA', 'ACUEDUCTO', 'GAS NATURAL', 'UNE'], 'cat-vivienda'],
+        [['CLARO', 'TIGO', 'MOVISTAR'], 'cat-vivienda'],
       ];
 
       for (const [keywords, catId] of rules) {
@@ -82,16 +82,16 @@ describe('CSV Import (Papa Parse)', () => {
       return undefined;
     }
 
-    it('suggests debitos for Netflix', () => {
-      expect(suggestCategory('PAGO PSE NETFLIX.COM')).toBe('cat-debitos');
+    it('suggests mercado for Netflix', () => {
+      expect(suggestCategory('PAGO PSE NETFLIX.COM')).toBe('cat-mercado');
     });
 
-    it('suggests para gastar for Exito', () => {
-      expect(suggestCategory('COMPRA PTO.VTA EXITO LAURELES')).toBe('cat-para-gastar');
+    it('suggests mercado for Exito', () => {
+      expect(suggestCategory('COMPRA PTO.VTA EXITO LAURELES')).toBe('cat-mercado');
     });
 
-    it('suggests tanqueadas for gas', () => {
-      expect(suggestCategory('COMPRA PTO.VTA TERPEL')).toBe('cat-tanqueadas');
+    it('suggests transporte for gas', () => {
+      expect(suggestCategory('COMPRA PTO.VTA TERPEL')).toBe('cat-transporte');
     });
 
     it('returns undefined for unknown', () => {

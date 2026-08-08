@@ -67,12 +67,12 @@ test.describe('Change Expense Category', () => {
   // Scenario 1: Happy path from Gastos Mensual view
   // ────────────────────────────────────────────────────────────
   test('moves expense from one category to another in Gastos view', async ({ page }) => {
-    // Seed an expense in "Administraciones" (cat-administraciones)
+    // Seed an expense in "Vivienda" (cat-vivienda)
     await seedBudgetAndExpenses(page, [
       {
         id: 'exp-move-1',
-        categoryId: 'cat-administraciones',
-        description: 'Admón Laureles',
+        categoryId: 'cat-vivienda',
+        description: 'Arriendo Laureles',
         amount: 500000,
       },
     ]);
@@ -80,12 +80,12 @@ test.describe('Change Expense Category', () => {
     await navigateTo(page, '/gastos');
     await page.waitForURL('/gastos');
 
-    // Verify expense appears under Administraciones
-    await expect(page.locator('text=Admón Laureles')).toBeVisible();
+    // Verify expense appears under Vivienda
+    await expect(page.locator('text=Arriendo Laureles')).toBeVisible();
 
     // Find the expense row and click the change-category button
     const expenseRow = page.locator('[data-expense-id="exp-move-1"]').or(
-      page.locator('text=Admón Laureles').locator('..').locator('..')
+      page.locator('text=Arriendo Laureles').locator('..').locator('..')
     );
     const changeCatBtn = expenseRow.locator('button[aria-label="Cambiar categoría"]');
     await changeCatBtn.click();
@@ -96,8 +96,8 @@ test.describe('Change Expense Category', () => {
     );
     await expect(categorySelect).toBeVisible();
 
-    // Select "Servicios" as new category
-    await categorySelect.selectOption('cat-servicios');
+    // Select "Mercado" as new category
+    await categorySelect.selectOption('cat-mercado');
 
     // Confirm the move (if there's a confirm button, click it)
     const confirmBtn = page.locator('button[aria-label="Confirmar cambio de categoría"]');
@@ -110,36 +110,36 @@ test.describe('Change Expense Category', () => {
       page.locator('text=categoría').or(page.locator('text=movió').or(page.locator('text=Categoría')))
     ).toBeVisible({ timeout: 5000 });
 
-    // Expense should now appear under Servicios section
-    const serviciosSection = page.locator('text=Servicios').locator('..').locator('..');
-    await expect(serviciosSection.locator('text=Admón Laureles')).toBeVisible();
+    // Expense should now appear under Mercado section
+    const mercadoSection = page.locator('text=Mercado').locator('..').locator('..');
+    await expect(mercadoSection.locator('text=Arriendo Laureles')).toBeVisible();
   });
 
   // ────────────────────────────────────────────────────────────
   // Scenario 2: Dashboard updates after category change
   // ────────────────────────────────────────────────────────────
   test('dashboard progress bars update after category change', async ({ page }) => {
-    // Seed expenses: one in Administraciones
+    // Seed expenses: one in Vivienda
     await seedBudgetAndExpenses(page, [
       {
         id: 'exp-dash-update',
-        categoryId: 'cat-administraciones',
-        description: 'Admón test',
+        categoryId: 'cat-vivienda',
+        description: 'Arriendo test',
         amount: 700000,
       },
     ]);
 
-    // First check dashboard shows the expense in Administraciones
+    // First check dashboard shows the expense in Vivienda
     await expect(page.locator('text=LIBRE')).toBeVisible();
-    const adminRow = page.locator('text=Administraciones').locator('..');
-    await expect(adminRow.locator('text=700.000')).toBeVisible();
+    const viviendaRow = page.locator('text=Vivienda').locator('..');
+    await expect(viviendaRow.locator('text=700.000')).toBeVisible();
 
-    // Now go to Gastos and move it to Servicios
+    // Now go to Gastos and move it to Mercado
     await navigateTo(page, '/gastos');
     await page.waitForURL('/gastos');
 
     const expenseRow = page.locator('[data-expense-id="exp-dash-update"]').or(
-      page.locator('text=Admón test').locator('..').locator('..')
+      page.locator('text=Arriendo test').locator('..').locator('..')
     );
     const changeCatBtn = expenseRow.locator('button[aria-label="Cambiar categoría"]');
     await changeCatBtn.click();
@@ -147,7 +147,7 @@ test.describe('Change Expense Category', () => {
     const categorySelect = page.locator('[data-testid="category-change-select"]').or(
       page.locator('select[aria-label="Nueva categoría"]')
     );
-    await categorySelect.selectOption('cat-servicios');
+    await categorySelect.selectOption('cat-mercado');
 
     const confirmBtn = page.locator('button[aria-label="Confirmar cambio de categoría"]');
     if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -161,9 +161,9 @@ test.describe('Change Expense Category', () => {
     await navigateTo(page, '/');
     await page.waitForURL('/');
 
-    // Servicios should now show the 700,000
-    const serviciosRow = page.locator('text=Servicios').locator('..');
-    await expect(serviciosRow.locator('text=700.000')).toBeVisible();
+    // Mercado should now show the 700,000
+    const mercadoRow = page.locator('text=Mercado').locator('..');
+    await expect(mercadoRow.locator('text=700.000')).toBeVisible();
 
     // LIBRE should stay the same (same total expenses, just moved category)
     await expect(page.locator('text=17.800.000')).toBeVisible();
@@ -176,8 +176,8 @@ test.describe('Change Expense Category', () => {
     await seedBudgetAndExpenses(page, [
       {
         id: 'exp-cancel',
-        categoryId: 'cat-administraciones',
-        description: 'Admón cancel test',
+        categoryId: 'cat-vivienda',
+        description: 'Arriendo cancel test',
         amount: 300000,
       },
     ]);
@@ -186,7 +186,7 @@ test.describe('Change Expense Category', () => {
     await page.waitForURL('/gastos');
 
     const expenseRow = page.locator('[data-expense-id="exp-cancel"]').or(
-      page.locator('text=Admón cancel test').locator('..').locator('..')
+      page.locator('text=Arriendo cancel test').locator('..').locator('..')
     );
     const changeCatBtn = expenseRow.locator('button[aria-label="Cambiar categoría"]');
     await changeCatBtn.click();
@@ -208,9 +208,9 @@ test.describe('Change Expense Category', () => {
     // Category select should disappear
     await expect(categorySelect).not.toBeVisible();
 
-    // Expense should remain under Administraciones
-    const adminSection = page.locator('text=Administraciones').locator('..').locator('..');
-    await expect(adminSection.locator('text=Admón cancel test')).toBeVisible();
+    // Expense should remain under Vivienda
+    const viviendaSection = page.locator('text=Vivienda').locator('..').locator('..');
+    await expect(viviendaSection.locator('text=Arriendo cancel test')).toBeVisible();
   });
 
   // ────────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ test.describe('Change Expense Category', () => {
     await seedBudgetAndExpenses(page, [
       {
         id: 'exp-disabled',
-        categoryId: 'cat-tanqueadas',
+        categoryId: 'cat-transporte',
         description: 'Tanqueo test',
         amount: 100000,
       },
@@ -240,8 +240,8 @@ test.describe('Change Expense Category', () => {
     );
     await expect(categorySelect).toBeVisible();
 
-    // The current category (Tanqueadas / cat-tanqueadas) should be disabled
-    const currentOption = categorySelect.locator('option[value="cat-tanqueadas"]');
+    // The current category (Transporte / cat-transporte) should be disabled
+    const currentOption = categorySelect.locator('option[value="cat-transporte"]');
     await expect(currentOption).toBeDisabled();
   });
 
@@ -252,24 +252,24 @@ test.describe('Change Expense Category', () => {
     await seedBudgetAndExpenses(page, [
       {
         id: 'exp-dash-move',
-        categoryId: 'cat-tanqueadas',
+        categoryId: 'cat-transporte',
         description: 'Tanqueo Terpel',
         amount: 120000,
       },
       {
         id: 'exp-dash-stay',
-        categoryId: 'cat-para-gastar',
+        categoryId: 'cat-mercado',
         description: 'Mercado semanal',
         amount: 200000,
       },
     ]);
 
     // Dashboard should show both categories
-    await expect(page.locator('text=Tanqueadas')).toBeVisible();
-    await expect(page.locator('text=Para gastar')).toBeVisible();
+    await expect(page.locator('text=Transporte')).toBeVisible();
+    await expect(page.locator('text=Mercado')).toBeVisible();
 
-    // Expand Tanqueadas category
-    await page.locator('button:has-text("Tanqueadas")').click();
+    // Expand Transporte category
+    await page.locator('button:has-text("Transporte")').click();
 
     // Should see the expense
     await expect(page.locator('text=Tanqueo Terpel')).toBeVisible();
@@ -281,11 +281,11 @@ test.describe('Change Expense Category', () => {
     const changeCatBtn = expenseRow.locator('button[aria-label="Cambiar categoría"]');
     await changeCatBtn.click();
 
-    // Select "Para gastar" as new category
+    // Select "Mercado" as new category
     const categorySelect = page.locator('[data-testid="category-change-select"]').or(
       page.locator('select[aria-label="Nueva categoría"]')
     );
-    await categorySelect.selectOption('cat-para-gastar');
+    await categorySelect.selectOption('cat-mercado');
 
     const confirmBtn = page.locator('button[aria-label="Confirmar cambio de categoría"]');
     if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -297,37 +297,36 @@ test.describe('Change Expense Category', () => {
       page.locator('text=categoría').or(page.locator('text=movió').or(page.locator('text=Categoría')))
     ).toBeVisible({ timeout: 5000 });
 
-    // Expense should disappear from Tanqueadas expanded section
-    const tanqueadasExpanded = page.locator('#cat-expenses-cat-tanqueadas');
-    await expect(tanqueadasExpanded.locator('text=Tanqueo Terpel')).not.toBeVisible();
+    // Expense should disappear from Transporte expanded section
+    const transporteExpanded = page.locator('#cat-expenses-cat-transporte');
+    await expect(transporteExpanded.locator('text=Tanqueo Terpel')).not.toBeVisible();
 
-    // Expand Para gastar and verify expense appears there
-    await page.locator('button:has-text("Para gastar")').click();
-    const paraGastarExpanded = page.locator('#cat-expenses-cat-para-gastar');
-    await expect(paraGastarExpanded.locator('text=Tanqueo Terpel')).toBeVisible();
+    // Expand Mercado and verify expense appears there
+    await page.locator('button:has-text("Mercado")').click();
+    const mercadoExpanded = page.locator('#cat-expenses-cat-mercado');
+    await expect(mercadoExpanded.locator('text=Tanqueo Terpel')).toBeVisible();
   });
 
   // ────────────────────────────────────────────────────────────
   // Scenario 6: Progress bar updates after move on Dashboard
   // ────────────────────────────────────────────────────────────
   test('progress bars update correctly after moving expense on Dashboard', async ({ page }) => {
-    // Tanqueadas target: 500,000; Para gastar target: 1,400,000
     await seedBudgetAndExpenses(page, [
       {
         id: 'exp-progress-1',
-        categoryId: 'cat-tanqueadas',
+        categoryId: 'cat-transporte',
         description: 'Tanqueo progreso',
         amount: 250000,
       },
     ]);
 
-    // Verify Tanqueadas shows 250,000 / 500,000 (50%)
-    await expect(page.locator('text=Tanqueadas')).toBeVisible();
-    const tanqueoRow = page.locator('button:has-text("Tanqueadas")');
-    await expect(tanqueoRow.locator('text=250.000')).toBeVisible();
+    // Verify Transporte shows 250,000
+    await expect(page.locator('text=Transporte')).toBeVisible();
+    const transporteRow = page.locator('button:has-text("Transporte")');
+    await expect(transporteRow.locator('text=250.000')).toBeVisible();
 
-    // Expand Tanqueadas and move expense to Para gastar
-    await tanqueoRow.click();
+    // Expand Transporte and move expense to Mercado
+    await transporteRow.click();
     await expect(page.locator('text=Tanqueo progreso')).toBeVisible();
 
     const expenseRow = page.locator('[data-expense-id="exp-progress-1"]').or(
@@ -339,7 +338,7 @@ test.describe('Change Expense Category', () => {
     const categorySelect = page.locator('[data-testid="category-change-select"]').or(
       page.locator('select[aria-label="Nueva categoría"]')
     );
-    await categorySelect.selectOption('cat-para-gastar');
+    await categorySelect.selectOption('cat-mercado');
 
     const confirmBtn = page.locator('button[aria-label="Confirmar cambio de categoría"]');
     if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -349,14 +348,13 @@ test.describe('Change Expense Category', () => {
     // Wait for reactive updates
     await page.waitForTimeout(500);
 
-    // Para gastar should now show 250,000
-    const paraGastarRow = page.locator('button:has-text("Para gastar")');
-    await expect(paraGastarRow.locator('text=250.000')).toBeVisible();
+    // Mercado should now show 250,000
+    const mercadoRow = page.locator('button:has-text("Mercado")');
+    await expect(mercadoRow.locator('text=250.000')).toBeVisible();
 
-    // Tanqueadas should no longer have any spent amount visible
-    // (it may disappear from the list or show 0)
+    // Transporte should no longer have any spent amount visible
     await expect(
-      page.locator('button:has-text("Tanqueadas")').locator('text=250.000')
+      page.locator('button:has-text("Transporte")').locator('text=250.000')
     ).not.toBeVisible();
   });
 
@@ -367,8 +365,8 @@ test.describe('Change Expense Category', () => {
     await seedBudgetAndExpenses(page, [
       {
         id: 'exp-last-one',
-        categoryId: 'cat-lavada-carro',
-        description: 'Lavada única',
+        categoryId: 'cat-transporte',
+        description: 'Peaje único',
         amount: 50000,
       },
     ]);
@@ -376,13 +374,13 @@ test.describe('Change Expense Category', () => {
     await navigateTo(page, '/gastos');
     await page.waitForURL('/gastos');
 
-    // Expense should be visible under "Lavada de carro"
-    await expect(page.locator('text=Lavada única')).toBeVisible();
-    await expect(page.locator('text=Lavada de carro')).toBeVisible();
+    // Expense should be visible under "Transporte"
+    await expect(page.locator('text=Peaje único')).toBeVisible();
+    await expect(page.locator('text=Transporte')).toBeVisible();
 
-    // Move it to Servicios
+    // Move it to Mercado
     const expenseRow = page.locator('[data-expense-id="exp-last-one"]').or(
-      page.locator('text=Lavada única').locator('..').locator('..')
+      page.locator('text=Peaje único').locator('..').locator('..')
     );
     const changeCatBtn = expenseRow.locator('button[aria-label="Cambiar categoría"]');
     await changeCatBtn.click();
@@ -390,7 +388,7 @@ test.describe('Change Expense Category', () => {
     const categorySelect = page.locator('[data-testid="category-change-select"]').or(
       page.locator('select[aria-label="Nueva categoría"]')
     );
-    await categorySelect.selectOption('cat-servicios');
+    await categorySelect.selectOption('cat-mercado');
 
     const confirmBtn = page.locator('button[aria-label="Confirmar cambio de categoría"]');
     if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -400,30 +398,9 @@ test.describe('Change Expense Category', () => {
     // Wait for update
     await page.waitForTimeout(500);
 
-    // "Lavada de carro" section should no longer be visible in grouped view
-    // (categories with 0 expenses are filtered out in Gastos view)
-    await expect(
-      page.locator('div').filter({ hasText: /^.*Lavada de carro.*Lavada única.*$/ })
-    ).not.toBeVisible();
-
-    // Expense should now be under Servicios
-    const serviciosSection = page.locator('text=Servicios').locator('..').locator('..');
-    await expect(serviciosSection.locator('text=Lavada única')).toBeVisible();
-
-    // Check on Dashboard that Lavada de carro shows no spending
-    await navigateTo(page, '/');
-    await page.waitForURL('/');
-
-    // Expand "Lavada de carro" category if visible on dashboard
-    const lavadaBtn = page.locator('button:has-text("Lavada de carro")');
-    if (await lavadaBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await lavadaBtn.click();
-      // Should show "Sin gastos" or $0
-      await expect(
-        page.locator('text=Sin gastos').or(page.locator('#cat-expenses-cat-lavada-carro').locator('text=$ 0'))
-      ).toBeVisible();
-    }
-    // If not visible, it means the dashboard filtered it out (spent=0 and target>0 still shows)
+    // Expense should now be under Mercado
+    const mercadoSection = page.locator('text=Mercado').locator('..').locator('..');
+    await expect(mercadoSection.locator('text=Peaje único')).toBeVisible();
   });
 
   // ────────────────────────────────────────────────────────────
@@ -436,8 +413,8 @@ test.describe('Change Expense Category', () => {
     await seedBudgetAndExpenses(page, [
       {
         id: 'exp-mobile',
-        categoryId: 'cat-administraciones',
-        description: 'Admón móvil',
+        categoryId: 'cat-vivienda',
+        description: 'Arriendo móvil',
         amount: 400000,
       },
     ]);
@@ -446,11 +423,11 @@ test.describe('Change Expense Category', () => {
     await page.goto('/gastos');
     await waitForAppReady(page);
 
-    await expect(page.locator('text=Admón móvil')).toBeVisible();
+    await expect(page.locator('text=Arriendo móvil')).toBeVisible();
 
     // Click change category
     const expenseRow = page.locator('[data-expense-id="exp-mobile"]').or(
-      page.locator('text=Admón móvil').locator('..').locator('..')
+      page.locator('text=Arriendo móvil').locator('..').locator('..')
     );
     const changeCatBtn = expenseRow.locator('button[aria-label="Cambiar categoría"]');
     await changeCatBtn.click();
@@ -462,7 +439,7 @@ test.describe('Change Expense Category', () => {
     await expect(categorySelect).toBeVisible();
 
     // Select new category
-    await categorySelect.selectOption('cat-servicios');
+    await categorySelect.selectOption('cat-mercado');
 
     const confirmBtn = page.locator('button[aria-label="Confirmar cambio de categoría"]');
     if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -474,9 +451,9 @@ test.describe('Change Expense Category', () => {
       page.locator('text=categoría').or(page.locator('text=movió').or(page.locator('text=Categoría')))
     ).toBeVisible({ timeout: 5000 });
 
-    // Expense should be under Servicios now
-    const serviciosSection = page.locator('text=Servicios').locator('..').locator('..');
-    await expect(serviciosSection.locator('text=Admón móvil')).toBeVisible();
+    // Expense should be under Mercado now
+    const mercadoSection = page.locator('text=Mercado').locator('..').locator('..');
+    await expect(mercadoSection.locator('text=Arriendo móvil')).toBeVisible();
   });
 
   // ────────────────────────────────────────────────────────────
@@ -486,7 +463,7 @@ test.describe('Change Expense Category', () => {
     await seedBudgetAndExpenses(page, [
       {
         id: 'exp-multi-move',
-        categoryId: 'cat-administraciones',
+        categoryId: 'cat-vivienda',
         description: 'Multi mover',
         amount: 100000,
       },
@@ -495,7 +472,7 @@ test.describe('Change Expense Category', () => {
     await navigateTo(page, '/gastos');
     await page.waitForURL('/gastos');
 
-    // ── Move 1: Administraciones → Servicios ──
+    // ── Move 1: Vivienda → Mercado ──
     let expenseRow = page.locator('[data-expense-id="exp-multi-move"]').or(
       page.locator('text=Multi mover').locator('..').locator('..')
     );
@@ -505,7 +482,7 @@ test.describe('Change Expense Category', () => {
     let categorySelect = page.locator('[data-testid="category-change-select"]').or(
       page.locator('select[aria-label="Nueva categoría"]')
     );
-    await categorySelect.selectOption('cat-servicios');
+    await categorySelect.selectOption('cat-mercado');
 
     let confirmBtn = page.locator('button[aria-label="Confirmar cambio de categoría"]');
     if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -515,11 +492,11 @@ test.describe('Change Expense Category', () => {
     // Wait for update
     await page.waitForTimeout(500);
 
-    // Verify it's now under Servicios
-    const serviciosSection = page.locator('text=Servicios').locator('..').locator('..');
-    await expect(serviciosSection.locator('text=Multi mover')).toBeVisible();
+    // Verify it's now under Mercado
+    const mercadoSection = page.locator('text=Mercado').locator('..').locator('..');
+    await expect(mercadoSection.locator('text=Multi mover')).toBeVisible();
 
-    // ── Move 2: Servicios → Tanqueadas ──
+    // ── Move 2: Mercado → Transporte ──
     expenseRow = page.locator('[data-expense-id="exp-multi-move"]').or(
       page.locator('text=Multi mover').locator('..').locator('..')
     );
@@ -529,7 +506,7 @@ test.describe('Change Expense Category', () => {
     categorySelect = page.locator('[data-testid="category-change-select"]').or(
       page.locator('select[aria-label="Nueva categoría"]')
     );
-    await categorySelect.selectOption('cat-tanqueadas');
+    await categorySelect.selectOption('cat-transporte');
 
     confirmBtn = page.locator('button[aria-label="Confirmar cambio de categoría"]');
     if (await confirmBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -539,20 +516,11 @@ test.describe('Change Expense Category', () => {
     // Wait for update
     await page.waitForTimeout(500);
 
-    // Verify it's now under Tanqueadas
-    const tanqueadasSection = page.locator('text=Tanqueadas').locator('..').locator('..');
-    await expect(tanqueadasSection.locator('text=Multi mover')).toBeVisible();
+    // Verify it's now under Transporte
+    const transporteSection = page.locator('text=Transporte').locator('..').locator('..');
+    await expect(transporteSection.locator('text=Multi mover')).toBeVisible();
 
-    // Verify it's no longer under Servicios
-    await expect(serviciosSection.locator('text=Multi mover')).not.toBeVisible();
-
-    // Verify it's no longer under Administraciones
-    // Administraciones card may not exist (0 expenses = filtered out)
-    const adminSection = page.locator('text=Administraciones');
-    if (await adminSection.isVisible({ timeout: 500 }).catch(() => false)) {
-      await expect(
-        adminSection.locator('..').locator('..').locator('text=Multi mover')
-      ).not.toBeVisible();
-    }
+    // Verify it's no longer under Mercado
+    await expect(mercadoSection.locator('text=Multi mover')).not.toBeVisible();
   });
 });

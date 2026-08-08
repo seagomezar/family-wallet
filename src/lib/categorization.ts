@@ -31,43 +31,24 @@ export interface BuiltinRule {
 // ─── Built-in Rules ──────────────────────────────────────────────────
 
 /**
- * Built-in categorization rules derived from analyzing 3 months of
- * Davibank statements (May, June, July 2026).
+ * Built-in categorization rules derived from common Colombian bank
+ * transaction patterns. Maps to the 3 generic seed categories.
+ * Users can override with custom rules in Settings.
  */
 export const BUILTIN_RULES: BuiltinRule[] = [
-  // ── Credits / Mortgage ─────────────────────────────
+  // ── Vivienda (housing) ─────────────────────────────
   {
     id: "builtin-vivienda",
     patterns: ["PAGO VIVIENDA", "Pago VIVIENDA", "PRESTAMOS", "Pago Int-5041"],
-    categoryId: "cat-creditos",
+    categoryId: "cat-vivienda",
     source: "builtin",
     confidence: "high",
     label: "Crédito vivienda/préstamos",
   },
-
-  // ── Débitos automáticos ────────────────────────────
-  {
-    id: "builtin-debito-ach",
-    patterns: ["DEBITO - RECAUDO ACH"],
-    categoryId: "cat-debitos",
-    source: "builtin",
-    confidence: "high",
-    label: "Débito automático ACH",
-  },
-  {
-    id: "builtin-pago-tc",
-    patterns: ["PAGO TC Credencial", "PAGO BANCO DE OCCIDENTE"],
-    categoryId: "cat-debitos",
-    source: "builtin",
-    confidence: "high",
-    label: "Pago tarjeta de crédito",
-  },
-
-  // ── Servicios ──────────────────────────────────────
   {
     id: "builtin-epm",
     patterns: ["EPM FACTURA", "EPM factura"],
-    categoryId: "cat-servicios",
+    categoryId: "cat-vivienda",
     source: "builtin",
     confidence: "high",
     label: "EPM factura",
@@ -75,33 +56,45 @@ export const BUILTIN_RULES: BuiltinRule[] = [
   {
     id: "builtin-movistar",
     patterns: ["facturas Movist", "Pago multiples facturas"],
-    categoryId: "cat-servicios",
+    categoryId: "cat-vivienda",
     source: "builtin",
     confidence: "high",
     label: "Servicios Movistar",
   },
-
-  // ── Internet Sopetrán ──────────────────────────────
   {
     id: "builtin-internet-sopetran",
     patterns: ["SOMOS INTERNET"],
-    categoryId: "cat-internet-sopetran",
+    categoryId: "cat-vivienda",
     source: "builtin",
     confidence: "high",
-    label: "Internet Sopetrán",
+    label: "Internet",
   },
-
-  // ── Tanqueadas ─────────────────────────────────────
   {
-    id: "builtin-tanqueadas",
-    patterns: ["TEXACO", "TERPEL", "MOBIL EDS", "EDS ", "PRIMAX", "GASOLINA"],
-    categoryId: "cat-tanqueadas",
+    id: "builtin-admin",
+    patterns: ["CONJ", "ADMINISTRACION", "ADMON", "PagodelaFactura"],
+    categoryId: "cat-vivienda",
+    source: "builtin",
+    confidence: "medium",
+    label: "Administración",
+  },
+  {
+    id: "builtin-predial",
+    patterns: ["Impuestopredial", "predial"],
+    categoryId: "cat-vivienda",
     source: "builtin",
     confidence: "high",
-    label: "Estaciones de gasolina",
+    label: "Impuesto predial",
+  },
+  {
+    id: "builtin-sol-creciente",
+    patterns: ["SolCreciente", "PagoSolCreciente"],
+    categoryId: "cat-vivienda",
+    source: "builtin",
+    confidence: "high",
+    label: "Sol Creciente (préstamo)",
   },
 
-  // ── Mercado / Supermercado ─────────────────────────
+  // ── Mercado (groceries & general spending) ─────────
   {
     id: "builtin-mercado",
     patterns: [
@@ -115,13 +108,11 @@ export const BUILTIN_RULES: BuiltinRule[] = [
       "EURO",
       "OLIMPICA",
     ],
-    categoryId: "cat-para-gastar",
+    categoryId: "cat-mercado",
     source: "builtin",
     confidence: "high",
     label: "Supermercados/mercado",
   },
-
-  // ── Ocio / Restaurantes ────────────────────────────
   {
     id: "builtin-restaurantes",
     patterns: [
@@ -136,130 +127,110 @@ export const BUILTIN_RULES: BuiltinRule[] = [
       "BIGOS",
       "TIENDA DE CAFE",
     ],
-    categoryId: "cat-para-gastar",
+    categoryId: "cat-mercado",
     source: "builtin",
     confidence: "medium",
     label: "Restaurantes/ocio",
   },
-
-  // ── CDT ────────────────────────────────────────────
-  {
-    id: "builtin-cdt",
-    patterns: ["CDT DIGITAL"],
-    categoryId: "cat-cdt",
-    source: "builtin",
-    confidence: "high",
-    label: "CDT Digital",
-  },
-
-  // ── Gym ────────────────────────────────────────────
   {
     id: "builtin-gym",
     patterns: ["ACTION BLACK"],
-    categoryId: "cat-para-gastar",
+    categoryId: "cat-mercado",
     source: "builtin",
     confidence: "high",
-    label: "Gimnasio Action Black",
+    label: "Gimnasio",
   },
-
-  // ── Administraciones ───────────────────────────────
-  {
-    id: "builtin-admin",
-    patterns: ["CONJ", "ADMINISTRACION", "ADMON", "PagodelaFactura"],
-    categoryId: "cat-administraciones",
-    source: "builtin",
-    confidence: "medium",
-    label: "Administración",
-  },
-
-  // ── Celulares ──────────────────────────────────────
-  {
-    id: "builtin-celulares",
-    patterns: ["CLARO", "TIGO"],
-    categoryId: "cat-celulares",
-    source: "builtin",
-    confidence: "medium",
-    label: "Plan celular",
-  },
-
-  // ── Universidad ────────────────────────────────────
-  {
-    id: "builtin-universidad",
-    patterns: ["UNIVERSIDAD EA", "EAFIT"],
-    categoryId: "cat-universidad",
-    source: "builtin",
-    confidence: "high",
-    label: "Universidad EAFIT",
-  },
-
-  // ── Apple (suscripción, débito) ────────────────────
-  {
-    id: "builtin-apple",
-    patterns: ["APPLE.COM/BILL", "APPLE._"],
-    categoryId: "cat-debitos",
-    source: "builtin",
-    confidence: "high",
-    label: "Apple subscriptions",
-  },
-
-  // ── DollarCity / libreria (para gastar) ────────────
   {
     id: "builtin-dollarcity",
     patterns: ["DOLLARCITY", "LIBRERIA NACIO"],
-    categoryId: "cat-para-gastar",
+    categoryId: "cat-mercado",
     source: "builtin",
     confidence: "medium",
     label: "Compras varias",
   },
-
-  // ── NU deposit / PSE factura (débitos) ─────────────
-  {
-    id: "builtin-nu",
-    patterns: ["DepOsito a tu cuenta NU"],
-    categoryId: "cat-debitos",
-    source: "builtin",
-    confidence: "medium",
-    label: "Depósito NU",
-  },
-
-  // ── Pago factura genérico (servicios) ──────────────
-  {
-    id: "builtin-factura",
-    patterns: ["Pago de factura"],
-    categoryId: "cat-servicios",
-    source: "builtin",
-    confidence: "low",
-    label: "Pago de factura (genérico)",
-  },
-
-  // ── Salud ──────────────────────────────────────────
   {
     id: "builtin-salud",
     patterns: ["CEDIMED", "CLINICA", "SUPLIMED", "CElulasMadre"],
-    categoryId: "cat-para-gastar",
+    categoryId: "cat-mercado",
     source: "builtin",
     confidence: "medium",
     label: "Salud/médico",
   },
 
-  // ── Impuestos (predial) ────────────────────────────
+  // ── Transporte ─────────────────────────────────────
   {
-    id: "builtin-predial",
-    patterns: ["Impuestopredial", "predial"],
-    categoryId: "cat-servicios",
+    id: "builtin-tanqueadas",
+    patterns: ["TEXACO", "TERPEL", "MOBIL EDS", "EDS ", "PRIMAX", "GASOLINA"],
+    categoryId: "cat-transporte",
     source: "builtin",
     confidence: "high",
-    label: "Impuesto predial",
+    label: "Estaciones de gasolina",
   },
 
-  // ── Sol Creciente (créditos) ───────────────────────
+  // ── General (mapped to mercado as catch-all) ───────
   {
-    id: "builtin-sol-creciente",
-    patterns: ["SolCreciente", "PagoSolCreciente"],
-    categoryId: "cat-creditos",
+    id: "builtin-debito-ach",
+    patterns: ["DEBITO - RECAUDO ACH"],
+    categoryId: "cat-mercado",
     source: "builtin",
     confidence: "high",
-    label: "Sol Creciente (préstamo)",
+    label: "Débito automático ACH",
+  },
+  {
+    id: "builtin-pago-tc",
+    patterns: ["PAGO TC Credencial", "PAGO BANCO DE OCCIDENTE"],
+    categoryId: "cat-mercado",
+    source: "builtin",
+    confidence: "high",
+    label: "Pago tarjeta de crédito",
+  },
+  {
+    id: "builtin-cdt",
+    patterns: ["CDT DIGITAL"],
+    categoryId: "cat-mercado",
+    source: "builtin",
+    confidence: "high",
+    label: "CDT Digital",
+  },
+  {
+    id: "builtin-celulares",
+    patterns: ["CLARO", "TIGO"],
+    categoryId: "cat-vivienda",
+    source: "builtin",
+    confidence: "medium",
+    label: "Plan celular",
+  },
+  {
+    id: "builtin-universidad",
+    patterns: ["UNIVERSIDAD EA", "EAFIT"],
+    categoryId: "cat-mercado",
+    source: "builtin",
+    confidence: "high",
+    label: "Universidad",
+  },
+  {
+    id: "builtin-apple",
+    patterns: ["APPLE.COM/BILL", "APPLE._"],
+    categoryId: "cat-mercado",
+    source: "builtin",
+    confidence: "high",
+    label: "Apple subscriptions",
+  },
+  {
+    id: "builtin-nu",
+    patterns: ["DepOsito a tu cuenta NU"],
+    categoryId: "cat-mercado",
+    source: "builtin",
+    confidence: "medium",
+    label: "Depósito NU",
+  },
+  {
+    id: "builtin-factura",
+    patterns: ["Pago de factura"],
+    categoryId: "cat-vivienda",
+    source: "builtin",
+    confidence: "low",
+    label: "Pago de factura (genérico)",
   },
 ];
 

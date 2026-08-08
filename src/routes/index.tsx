@@ -76,6 +76,10 @@ function Dashboard() {
     })
     .filter((c) => c.spent > 0 || c.monthlyTarget > 0);
 
+  // Show helpful hint when all budgets are $0 (fresh install)
+  const allBudgetsZero = (categories ?? []).length > 0 &&
+    (categories ?? []).every((c) => c.monthlyTarget === 0);
+
   return (
     <div className="space-y-6 pb-20 md:pb-6 md:pl-56">
       {/* Category change toast */}
@@ -137,6 +141,18 @@ function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Budget setup hint */}
+      {allBudgetsZero && (
+        <Card className="border-dashed border-primary/40 bg-primary/5">
+          <CardContent className="p-4">
+            <p className="text-sm text-center text-muted-foreground">
+              💡 Agrega tus categorías y presupuestos en la sección de{" "}
+              <span className="font-semibold text-primary">Categorías</span>
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Category Breakdown */}
       <Card data-tour="categories">

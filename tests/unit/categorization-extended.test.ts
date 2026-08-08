@@ -71,111 +71,111 @@ describe('Categorization Engine - Extended', () => {
     });
 
     // Test every high-confidence rule
-    it('TEXACO → tanqueadas', () => {
+    it('TEXACO → transporte', () => {
       const r = categorizeWithBuiltins('COMPRA POS TEXACO LA 33');
-      expect(r.categoryId).toBe('cat-tanqueadas');
+      expect(r.categoryId).toBe('cat-transporte');
       expect(r.confidence).toBe('high');
     });
 
-    it('TERPEL → tanqueadas', () => {
+    it('TERPEL → transporte', () => {
       const r = categorizeWithBuiltins('COMPRA POS TERPEL LA FLORA');
-      expect(r.categoryId).toBe('cat-tanqueadas');
+      expect(r.categoryId).toBe('cat-transporte');
       expect(r.confidence).toBe('high');
     });
 
-    it('PRIMAX → tanqueadas', () => {
+    it('PRIMAX → transporte', () => {
       const r = categorizeWithBuiltins('COMPRA POS PRIMAX DORADO');
-      expect(r.categoryId).toBe('cat-tanqueadas');
+      expect(r.categoryId).toBe('cat-transporte');
       expect(r.confidence).toBe('high');
     });
 
-    it('GASOLINA → tanqueadas', () => {
+    it('GASOLINA → transporte', () => {
       const r = categorizeWithBuiltins('PAGO GASOLINA EDS');
-      expect(r.categoryId).toBe('cat-tanqueadas');
+      expect(r.categoryId).toBe('cat-transporte');
       expect(r.confidence).toBe('high');
     });
 
-    it('CARULLA → para-gastar', () => {
+    it('CARULLA → mercado', () => {
       const r = categorizeWithBuiltins('COMPRA POS CARULLA LAUR');
-      expect(r.categoryId).toBe('cat-para-gastar');
+      expect(r.categoryId).toBe('cat-mercado');
       expect(r.confidence).toBe('high');
     });
 
-    it('JUMBO → para-gastar', () => {
+    it('JUMBO → mercado', () => {
       const r = categorizeWithBuiltins('COMPRA POS JUMBO ENVIGADO');
-      expect(r.categoryId).toBe('cat-para-gastar');
+      expect(r.categoryId).toBe('cat-mercado');
       expect(r.confidence).toBe('high');
     });
 
-    it('OLIMPICA → para-gastar', () => {
+    it('OLIMPICA → mercado', () => {
       const r = categorizeWithBuiltins('COMPRA POS OLIMPICA SAO');
-      expect(r.categoryId).toBe('cat-para-gastar');
+      expect(r.categoryId).toBe('cat-mercado');
       expect(r.confidence).toBe('high');
     });
 
-    it('D1 → para-gastar', () => {
+    it('D1 → mercado', () => {
       const r = categorizeWithBuiltins('COMPRA POS D1 LAURELES');
-      expect(r.categoryId).toBe('cat-para-gastar');
+      expect(r.categoryId).toBe('cat-mercado');
       expect(r.confidence).toBe('high');
     });
 
-    it('CEDIMED → para-gastar (salud)', () => {
+    it('CEDIMED → mercado (salud)', () => {
       const r = categorizeWithBuiltins('COMPRA POS CEDIMED MEDELLIN');
-      expect(r.categoryId).toBe('cat-para-gastar');
+      expect(r.categoryId).toBe('cat-mercado');
       expect(r.confidence).toBe('medium');
     });
 
-    it('CLINICA → para-gastar (salud)', () => {
+    it('CLINICA → mercado (salud)', () => {
       const r = categorizeWithBuiltins('COMPRA POS CLINICA DEL NORTE');
-      expect(r.categoryId).toBe('cat-para-gastar');
+      expect(r.categoryId).toBe('cat-mercado');
       expect(r.confidence).toBe('medium');
     });
 
-    it('CLARO → celulares', () => {
+    it('CLARO → vivienda (celulares)', () => {
       const r = categorizeWithBuiltins('Pago por PSE CLARO MOVIL');
-      expect(r.categoryId).toBe('cat-celulares');
+      expect(r.categoryId).toBe('cat-vivienda');
       expect(r.confidence).toBe('medium');
     });
 
-    it('TIGO → celulares', () => {
+    it('TIGO → vivienda (celulares)', () => {
       const r = categorizeWithBuiltins('DEBITO ACH TIGO COLOMBIA');
-      expect(r.categoryId).toBe('cat-celulares');
+      expect(r.categoryId).toBe('cat-vivienda');
       expect(r.confidence).toBe('medium');
     });
 
-    it('CONJ → administraciones', () => {
+    it('CONJ → vivienda (administraciones)', () => {
       const r = categorizeWithBuiltins('Pago por PSE CONJ RES LAURELES');
-      expect(r.categoryId).toBe('cat-administraciones');
+      expect(r.categoryId).toBe('cat-vivienda');
       expect(r.confidence).toBe('medium');
     });
 
-    it('PagodelaFactura → administraciones', () => {
+    it('PagodelaFactura → vivienda', () => {
       const r = categorizeWithBuiltins('PagodelaFactura 12345');
-      expect(r.categoryId).toBe('cat-administraciones');
+      expect(r.categoryId).toBe('cat-vivienda');
       expect(r.confidence).toBe('medium');
     });
 
-    it('DOLLARCITY → para-gastar', () => {
+    it('DOLLARCITY → mercado', () => {
       const r = categorizeWithBuiltins('COMPRA POS DOLLARCITY SAN FER');
-      expect(r.categoryId).toBe('cat-para-gastar');
+      expect(r.categoryId).toBe('cat-mercado');
       expect(r.confidence).toBe('medium');
     });
 
-    it('Impuestopredial → servicios', () => {
+    it('Impuestopredial → vivienda', () => {
       const r = categorizeWithBuiltins('Pago por PSE Impuestopredial2026');
-      expect(r.categoryId).toBe('cat-servicios');
+      expect(r.categoryId).toBe('cat-vivienda');
       expect(r.confidence).toBe('high');
     });
 
-    it('Pago de factura → servicios (low confidence)', () => {
+    it('Pago de factura → vivienda (low confidence)', () => {
       const r = categorizeWithBuiltins('Pago de factura genérica');
-      expect(r.categoryId).toBe('cat-servicios');
+      expect(r.categoryId).toBe('cat-vivienda');
       expect(r.confidence).toBe('low');
     });
 
-    it('PAGO BANCO DE OCCIDENTE → debitos', () => {
+    it('PAGO BANCO DE OCCIDENTE → mercado', () => {
       const r = categorizeWithBuiltins('Pago por PSE PAGO BANCO DE OCCIDENTE');
-      expect(r.categoryId).toBe('cat-debitos');
+      expect(r.categoryId).toBe('cat-mercado');
       expect(r.confidence).toBe('high');
     });
   });
@@ -183,21 +183,21 @@ describe('Categorization Engine - Extended', () => {
   describe('categorize (async with user rules)', () => {
     it('uses builtin rules when no user rules exist', async () => {
       const result = await categorize('COMPRA POS EXITO WOW');
-      expect(result.categoryId).toBe('cat-para-gastar');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('high');
     });
 
     it('user rules take priority over builtins', async () => {
       // Create a user rule for EXITO that maps to a different category
-      await createUserRule('EXITO', 'cat-tanqueadas');
+      await createUserRule('EXITO', 'cat-transporte');
 
       const result = await categorize('COMPRA POS EXITO WOW');
-      expect(result.categoryId).toBe('cat-tanqueadas');
+      expect(result.categoryId).toBe('cat-transporte');
       expect(result.confidence).toBe('high');
     });
 
     it('increments matchCount on user rule match', async () => {
-      const rule = await createUserRule('NETFLIX', 'cat-debitos');
+      const rule = await createUserRule('NETFLIX', 'cat-mercado');
 
       await categorize('PAGO PSE NETFLIX.COM');
 
@@ -206,23 +206,23 @@ describe('Categorization Engine - Extended', () => {
     });
 
     it('falls through to builtins if user rule does not match', async () => {
-      await createUserRule('NETFLIX', 'cat-debitos');
+      await createUserRule('NETFLIX', 'cat-mercado');
 
       const result = await categorize('COMPRA POS TEXACO');
-      expect(result.categoryId).toBe('cat-tanqueadas');
+      expect(result.categoryId).toBe('cat-transporte');
     });
 
     it('supports regex user rules', async () => {
-      await createUserRule('UBER\\s+TRIP', 'cat-tanqueadas', true);
+      await createUserRule('UBER\\s+TRIP', 'cat-transporte', true);
 
       const result = await categorize('UBER TRIP 12345');
-      expect(result.categoryId).toBe('cat-tanqueadas');
+      expect(result.categoryId).toBe('cat-transporte');
       expect(result.confidence).toBe('high');
     });
 
     it('regex rule fallback to substring on invalid regex', async () => {
       // Invalid regex falls back to substring match
-      await createUserRule('[invalid', 'cat-debitos', true);
+      await createUserRule('[invalid', 'cat-mercado', true);
 
       // The pattern "[invalid" used as substring won't match "SOMETHING"
       const result = await categorize('SOMETHING ELSE');
@@ -240,22 +240,22 @@ describe('Categorization Engine - Extended', () => {
       ]);
 
       expect(results).toHaveLength(4);
-      expect(results[0]!.categoryId).toBe('cat-para-gastar');
-      expect(results[1]!.categoryId).toBe('cat-tanqueadas');
-      expect(results[2]!.categoryId).toBe('cat-servicios');
+      expect(results[0]!.categoryId).toBe('cat-mercado');
+      expect(results[1]!.categoryId).toBe('cat-transporte');
+      expect(results[2]!.categoryId).toBe('cat-vivienda');
       expect(results[3]!.confidence).toBe('none');
     });
 
     it('user rules apply in batch mode', async () => {
-      await createUserRule('CUSTOM STORE', 'cat-universidad');
+      await createUserRule('CUSTOM STORE', 'cat-vivienda');
 
       const results = await categorizeBatch([
         'COMPRA POS CUSTOM STORE',
         'COMPRA POS EXITO',
       ]);
 
-      expect(results[0]!.categoryId).toBe('cat-universidad');
-      expect(results[1]!.categoryId).toBe('cat-para-gastar');
+      expect(results[0]!.categoryId).toBe('cat-vivienda');
+      expect(results[1]!.categoryId).toBe('cat-mercado');
     });
 
     it('handles empty array', async () => {
@@ -264,23 +264,23 @@ describe('Categorization Engine - Extended', () => {
     });
 
     it('batch regex user rules work', async () => {
-      await createUserRule('\\d{6}.*UBER', 'cat-tanqueadas', true);
+      await createUserRule('\\d{6}.*UBER', 'cat-transporte', true);
 
       const results = await categorizeBatch([
         '123456 UBER TRIP',
         'COMPRA POS EXITO',
       ]);
-      expect(results[0]!.categoryId).toBe('cat-tanqueadas');
-      expect(results[1]!.categoryId).toBe('cat-para-gastar');
+      expect(results[0]!.categoryId).toBe('cat-transporte');
+      expect(results[1]!.categoryId).toBe('cat-mercado');
     });
   });
 
   describe('createUserRule', () => {
     it('creates a rule with correct fields', async () => {
-      const rule = await createUserRule('TEST PATTERN', 'cat-creditos');
+      const rule = await createUserRule('TEST PATTERN', 'cat-vivienda');
 
       expect(rule.pattern).toBe('TEST PATTERN');
-      expect(rule.categoryId).toBe('cat-creditos');
+      expect(rule.categoryId).toBe('cat-vivienda');
       expect(rule.source).toBe('user');
       expect(rule.isRegex).toBe(false);
       expect(rule.matchCount).toBe(0);
@@ -289,20 +289,20 @@ describe('Categorization Engine - Extended', () => {
     });
 
     it('creates regex rule', async () => {
-      const rule = await createUserRule('UBER\\s+\\d+', 'cat-tanqueadas', true);
+      const rule = await createUserRule('UBER\\s+\\d+', 'cat-transporte', true);
       expect(rule.isRegex).toBe(true);
     });
 
     it('persists to database', async () => {
-      const rule = await createUserRule('PERSIST TEST', 'cat-debitos');
+      const rule = await createUserRule('PERSIST TEST', 'cat-mercado');
       const fromDb = await db.categorizationRules.get(rule.id);
       expect(fromDb).toBeDefined();
       expect(fromDb!.pattern).toBe('PERSIST TEST');
     });
 
     it('generates unique IDs', async () => {
-      const rule1 = await createUserRule('A', 'cat-creditos');
-      const rule2 = await createUserRule('B', 'cat-creditos');
+      const rule1 = await createUserRule('A', 'cat-vivienda');
+      const rule2 = await createUserRule('B', 'cat-vivienda');
       expect(rule1.id).not.toBe(rule2.id);
     });
   });
@@ -314,8 +314,8 @@ describe('Categorization Engine - Extended', () => {
     });
 
     it('returns user rules after creation', async () => {
-      await createUserRule('RULE1', 'cat-creditos');
-      await createUserRule('RULE2', 'cat-debitos');
+      await createUserRule('RULE1', 'cat-vivienda');
+      await createUserRule('RULE2', 'cat-mercado');
 
       const rules = await getAllRules();
       expect(rules).toHaveLength(2);
@@ -324,7 +324,7 @@ describe('Categorization Engine - Extended', () => {
 
   describe('deleteUserRule', () => {
     it('removes rule from database', async () => {
-      const rule = await createUserRule('TO DELETE', 'cat-creditos');
+      const rule = await createUserRule('TO DELETE', 'cat-vivienda');
       await deleteUserRule(rule.id);
 
       const fromDb = await db.categorizationRules.get(rule.id);
@@ -332,8 +332,8 @@ describe('Categorization Engine - Extended', () => {
     });
 
     it('does not affect other rules', async () => {
-      const rule1 = await createUserRule('KEEP', 'cat-creditos');
-      const rule2 = await createUserRule('DELETE', 'cat-debitos');
+      const rule1 = await createUserRule('KEEP', 'cat-vivienda');
+      const rule2 = await createUserRule('DELETE', 'cat-mercado');
 
       await deleteUserRule(rule2.id);
 
@@ -389,6 +389,13 @@ describe('Categorization Engine - Extended', () => {
         for (const pattern of rule.patterns) {
           expect(pattern.length).toBeGreaterThan(0);
         }
+      }
+    });
+
+    it('all rules reference one of the 3 seed category IDs', () => {
+      const validCategoryIds = ['cat-vivienda', 'cat-mercado', 'cat-transporte'];
+      for (const rule of BUILTIN_RULES) {
+        expect(validCategoryIds).toContain(rule.categoryId);
       }
     });
   });

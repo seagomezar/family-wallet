@@ -48,100 +48,100 @@ describe('Categorization Engine', () => {
   });
 
   describe('categorizeWithBuiltins', () => {
-    it('categorizes supermarket purchases to para-gastar', () => {
+    it('categorizes supermarket purchases to mercado', () => {
       const result = categorizeWithBuiltins('COMPRA POS EXITO WOW LAUR 080526 202423');
-      expect(result.categoryId).toBe('cat-para-gastar');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('high');
       expect(result.isTransfer).toBe(false);
     });
 
-    it('categorizes gas stations to tanqueadas', () => {
+    it('categorizes gas stations to transporte', () => {
       const result = categorizeWithBuiltins('COMPRA POS TEXACO N 11 18 215941');
-      expect(result.categoryId).toBe('cat-tanqueadas');
+      expect(result.categoryId).toBe('cat-transporte');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes Mobil EDS to tanqueadas', () => {
+    it('categorizes Mobil EDS to transporte', () => {
       const result = categorizeWithBuiltins('COMPRA POS MOBIL EDS LOS DRO 250526 124611');
-      expect(result.categoryId).toBe('cat-tanqueadas');
+      expect(result.categoryId).toBe('cat-transporte');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes EPM factura to servicios', () => {
+    it('categorizes EPM factura to vivienda', () => {
       const result = categorizeWithBuiltins('Pago por PSE EPM FACTURA WEB PSE');
-      expect(result.categoryId).toBe('cat-servicios');
+      expect(result.categoryId).toBe('cat-vivienda');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes Movistar to servicios', () => {
+    it('categorizes Movistar to vivienda', () => {
       const result = categorizeWithBuiltins('Pago por PSE Pago multiples facturas Movist');
-      expect(result.categoryId).toBe('cat-servicios');
+      expect(result.categoryId).toBe('cat-vivienda');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes PAGO VIVIENDA to creditos', () => {
+    it('categorizes PAGO VIVIENDA to vivienda', () => {
       const result = categorizeWithBuiltins('Pago VIVIENDA Y OTROSCREDITOS');
-      expect(result.categoryId).toBe('cat-creditos');
+      expect(result.categoryId).toBe('cat-vivienda');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes PRESTAMOS to creditos', () => {
+    it('categorizes PRESTAMOS to vivienda', () => {
       const result = categorizeWithBuiltins('Pago Int-504119030946 -PRESTAMOS');
-      expect(result.categoryId).toBe('cat-creditos');
+      expect(result.categoryId).toBe('cat-vivienda');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes DEBITO ACH to debitos', () => {
+    it('categorizes DEBITO ACH to mercado', () => {
       const result = categorizeWithBuiltins('DEBITO - RECAUDO ACH A-0007-Id890903790');
-      expect(result.categoryId).toBe('cat-debitos');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes PAGO TC Credencial to debitos', () => {
+    it('categorizes PAGO TC Credencial to mercado', () => {
       const result = categorizeWithBuiltins('Pago por PSE PAGO TC Credencial Visa');
-      expect(result.categoryId).toBe('cat-debitos');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes restaurants to para-gastar', () => {
+    it('categorizes restaurants to mercado', () => {
       const result = categorizeWithBuiltins('COMPRA POS FRISBY NO G-69 26 190737');
-      expect(result.categoryId).toBe('cat-para-gastar');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('medium');
     });
 
-    it('categorizes CINEMAS to para-gastar', () => {
+    it('categorizes CINEMAS to mercado', () => {
       const result = categorizeWithBuiltins('COMPRA POS CINEMAS PROCIN ENT 180726 180150');
-      expect(result.categoryId).toBe('cat-para-gastar');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('medium');
     });
 
-    it('categorizes CDT Digital', () => {
+    it('categorizes CDT Digital to mercado', () => {
       const result = categorizeWithBuiltins('CDT DIGITAL NO COBRO 4X10 Internet');
-      expect(result.categoryId).toBe('cat-cdt');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes UNIVERSIDAD EAFIT', () => {
+    it('categorizes UNIVERSIDAD EAFIT to mercado', () => {
       const result = categorizeWithBuiltins('COMPRA POS UNIVERSIDAD EA 90526 151919');
-      expect(result.categoryId).toBe('cat-universidad');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes ACTION BLACK (gym)', () => {
+    it('categorizes ACTION BLACK (gym) to mercado', () => {
       const result = categorizeWithBuiltins('COMPRA POS ACTION BLACK V 0526 080544');
-      expect(result.categoryId).toBe('cat-para-gastar');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes APPLE.COM/BILL to debitos', () => {
+    it('categorizes APPLE.COM/BILL to mercado', () => {
       const result = categorizeWithBuiltins('COMPRA POS APPLE.COM/BILL 26 065743');
-      expect(result.categoryId).toBe('cat-debitos');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes SOMOS INTERNET to internet-sopetran', () => {
+    it('categorizes SOMOS INTERNET to vivienda', () => {
       const result = categorizeWithBuiltins('Pago a SOMOS INTERNET,ref: WC');
-      expect(result.categoryId).toBe('cat-internet-sopetran');
+      expect(result.categoryId).toBe('cat-vivienda');
       expect(result.confidence).toBe('high');
     });
 
@@ -163,21 +163,21 @@ describe('Categorization Engine', () => {
       expect(result.categoryId).toBeNull();
     });
 
-    it('categorizes PRICESMART to para-gastar', () => {
+    it('categorizes PRICESMART to mercado', () => {
       const result = categorizeWithBuiltins('COMPRA POS PRICESMART AME 010526 160248');
-      expect(result.categoryId).toBe('cat-para-gastar');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes Sol Creciente to creditos', () => {
+    it('categorizes Sol Creciente to vivienda', () => {
       const result = categorizeWithBuiltins('Pago por PSE PagoSolCrecienteFAC.60240Apart');
-      expect(result.categoryId).toBe('cat-creditos');
+      expect(result.categoryId).toBe('cat-vivienda');
       expect(result.confidence).toBe('high');
     });
 
-    it('categorizes NU deposit to debitos', () => {
+    it('categorizes NU deposit to mercado', () => {
       const result = categorizeWithBuiltins('Pago por PSE DepOsito a tu cuenta NU');
-      expect(result.categoryId).toBe('cat-debitos');
+      expect(result.categoryId).toBe('cat-mercado');
       expect(result.confidence).toBe('medium');
     });
   });
